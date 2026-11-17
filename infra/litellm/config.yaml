@@ -1,29 +1,34 @@
-# LiteLLM gateway configuration.
-#
-# The default alias targets a local Ollama server so the gateway and the full
-# stack start without any provider API key. Add provider models by setting the
-# matching environment variables and extending model_list; never commit keys.
+# Bundled LiteLLM proxy. Development and test traffic should use an EXTERNAL
+# gateway via EXTERNAL_LITELLM_BASE_URL. This local proxy is only a fallback and
+# requires a real provider API key; it no longer targets local inference.
 model_list:
   - model_name: orgweave-default
     litellm_params:
-      model: ollama_chat/qwen2.5:1.5b
-      api_base: os.environ/OLLAMA_BASE_URL
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
     model_info:
-      description: "Phase 0 default alias (local Ollama, no API key required)"
+      description: "Default alias via external OpenAI provider"
 
   - model_name: orgweave-fast
     litellm_params:
-      model: ollama_chat/qwen2.5:1.5b
-      api_base: os.environ/OLLAMA_BASE_URL
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
     model_info:
-      description: "Phase 0 fast alias for development smoke tests"
+      description: "Fast alias via external OpenAI provider"
+
+  - model_name: orgweave-strong
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+    model_info:
+      description: "Strong alias via external OpenAI provider"
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
-  request_timeout: 60
+  request_timeout: 300
 
 litellm_settings:
   drop_params: true
   num_retries: 2
-  request_timeout: 60
+  request_timeout: 300
   telemetry: false

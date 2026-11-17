@@ -13,8 +13,8 @@ x-service-env: &service-env
   TEMPORAL_HOST: temporal:7233
   TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
   TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-orgweave-phase0}
-  LITELLM_BASE_URL: http://litellm:4000
-  LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-orgweave-dev-master-key}
+  LITELLM_BASE_URL: ${EXTERNAL_LITELLM_BASE_URL:-http://litellm:4000}
+  LITELLM_MASTER_KEY: ${EXTERNAL_LITELLM_MASTER_KEY:-sk-orgweave-dev-master-key}
   MINIO_ENDPOINT: minio:9000
   MINIO_SECURE: "false"
   MINIO_BUCKET: ${MINIO_BUCKET:-orgweave}
@@ -102,12 +102,9 @@ services:
     command: ["--config", "/app/config.yaml", "--host", "0.0.0.0", "--port", "4000"]
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-orgweave-dev-master-key}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     ports:
       - "4000:4000"
     volumes:

@@ -225,7 +225,7 @@ async def execute_run(
                     tools=tools,
                     temperature=float(agent.temperature),
                     max_tokens=agent.max_output_tokens,
-                    timeout_seconds=min(120, remaining),
+                    timeout_seconds=min(240, remaining),
                 )
             except ModelGatewayError as exc:
                 await _fail_run(session, run, agent_session, str(exc))

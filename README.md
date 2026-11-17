@@ -2,7 +2,7 @@
 
 **AI Organization Operating System** — 以组织架构为基础、以 AI 员工为执行主体、以人类管理员为控制中心的多租户 AI 企业操作系统。
 
-> **当前状态：Phase 4（Agent Delegation）已完成，并通过真实模型端到端验收（Ollama + LiteLLM）。** 已包含认证、多租户、组织、RBAC、RLS、群聊、附件、实时事件、Agent 配置、独立 Session/Run、模型网关、工具调用、记忆与执行限制。
+> **当前状态：Phase 4（Agent Delegation）已完成；MVP Checkpoint 与后续真实模型验收需配置外部模型网关凭据。** 已包含认证、多租户、组织、RBAC、RLS、群聊、附件、实时事件、Agent 配置、独立 Session/Run、模型网关、工具调用、记忆与执行限制。
 
 ## 已交付
 
@@ -167,18 +167,24 @@ scripts/                bootstrap / health / verify / worker / temporal smoke
 - MinIO 社区镜像已从 Docker Hub 移除，本项目使用 Chainguard 维护的 `cgr.dev/chainguard/minio`。对象桶由 API 启动时幂等创建。
 - 生产环境不得使用 Temporal 开发模式；Phase 0 仅用于本地开发。
 
-## 本地模型（可选）
+## 外部模型网关（开发/测试）
 
-默认模型别名 `orgweave-default` 指向本地 Ollama。安装并启动后：
+开发与测试统一使用外部模型网关，不使用本地推理。将外部网关地址和 Key 写入 `.env`：
 
 ```bash
-# 安装 Ollama（示例：Linux 解压包方式或官方安装脚本）
-ollama serve
-ollama pull qwen2.5:1.5b
+EXTERNAL_LITELLM_BASE_URL=https://your-litellm-gateway.example.com
+EXTERNAL_LITELLM_MASTER_KEY=sk-...
+OPENAI_API_KEY=...          # 若由外部网关代理可留空
 ```
 
-Docker 内的 LiteLLM 通过 `host.docker.internal:11434` 访问宿主 Ollama；
-`.env` 的 `OLLAMA_BASE_URL` 可调整。没有模型时系统仍可启动，Agent Run 会明确失败。
+`docker compose` 会将 API/Worker 的 `LITELLM_BASE_URL` 指向该地址。本机运行 API 时可直接：
+
+```bash
+LITELLM_BASE_URL=https://your-gateway... LITELLM_MASTER_KEY=sk-... make api
+```
+
+没有配置外部网关时，基础设施仍能启动，但 Agent Run 会明确失败为模型网关错误。
+开发/测试的真实模型验收需要外部网关凭据。
 
 ## 已知限制（Phase 0 范围内）
 

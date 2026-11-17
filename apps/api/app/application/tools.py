@@ -509,8 +509,14 @@ async def _workspace_write_file(context: ToolContext, arguments: dict[str, Any])
 
     if context.settings is None:
         raise ValueError("storage unavailable")
-    path = _validate_path(str(arguments.get("path", "")))
-    content = str(arguments.get("content", ""))
+    raw_path = arguments.get("path", "")
+    if isinstance(raw_path, dict):
+        raw_path = raw_path.get("value", "")
+    path = _validate_path(str(raw_path))
+    content = arguments.get("content", "")
+    if isinstance(content, dict):
+        content = content.get("value", "")
+    content = str(content)
     if len(content.encode("utf-8")) > 200_000:
         raise ValueError("file too large (max 200KB)")
     root = await _workspace_root(context)
