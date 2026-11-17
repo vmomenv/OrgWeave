@@ -9,7 +9,7 @@ DC ?= docker compose
 COMPOSE_FILE := docker-compose.yml
 
 .PHONY: help bootstrap install env infra up down restart logs ps health migrate migrate-down \
-        test test-unit test-integration lint format api web workers workers-stop temporal-test verify clean
+        db-bootstrap test test-unit test-integration lint format api web workers workers-stop temporal-test verify verify-phase1 clean
 
 help: ## Show available commands
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -52,6 +52,9 @@ health: ## Check all service health endpoints
 migrate: ## Apply Alembic migrations
 	cd apps/api && ../../$(VENV)/bin/alembic upgrade head
 
+db-bootstrap: ## Ensure the non-superuser application role exists
+	@bash scripts/db-bootstrap.sh
+
 migrate-down: ## Roll back the latest migration
 	cd apps/api && ../../$(VENV)/bin/alembic downgrade -1
 
@@ -91,6 +94,9 @@ temporal-test: ## Execute the Phase 0 Temporal ping workflow end-to-end
 
 verify: ## Full Phase 0 acceptance verification
 	@bash scripts/verify-phase0.sh
+
+verify-phase1: ## Phase 1 acceptance (auth, org, RLS boundary, web)
+	@bash scripts/verify-phase1.sh
 
 clean: ## Remove build artifacts and caches (keeps .env and volumes)
 	rm -rf .pytest_cache .ruff_cache .data/logs

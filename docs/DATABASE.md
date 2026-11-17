@@ -31,11 +31,31 @@ cd apps/api && ../../.venv/bin/alembic current
 - `vector` 扩展不在 downgrade 中删除，避免破坏未来依赖它的对象；由基础设施初始化负责。
 - 迁移 URL 从 `OrgWeaveSettings` 读取，绝不从 `alembic.ini` 读取真实凭据。
 
-## 4. Phase 1 规划：多租户与 RLS
+## 4. Phase 1：多租户、组织与 RLS（已实现）
 
-Phase 0 **未创建任何业务表**，以下为 Phase 1 必须遵守的约束：
+迁移 `0002_phase1` 创建：
 
-1. 所有租户业务表包含 `tenant_id uuid NOT NULL`。
+- `users`、`refresh_tokens`（全局认证表）。
+- `tenants`（全局目录），`tenant_memberships`。
+- `departments`（自引用层级 + 复合租户外键）。
+- `members`（human/ai 统一，复合外键到部门/上级）。
+- `permissions`、`roles`（全局模板）、`role_permissions`、`member_roles`。
+- `invitations`、`audit_logs`。
+
+RLS 实际配置：
+
+- `tenant_memberships`、`departments`、`members`、`member_roles`、`invitations`、`audit_logs`
+  启用 `ENABLE` + `FORCE ROW LEVEL SECURITY`。
+- 策略使用 `nullif(current_setting('app.tenant_id', true), '')::uuid`。
+- `tenant_memberships` 允许用户读取自己的成员关系（用于租户选择），写入仍需当前租户上下文。
+- 审计表允许 `tenant_id IS NULL` 的全局事件，但只对事件 actor 可见。
+- 应用连接角色 `orgweave_app`：`NOSUPERUSER NOBYPASSRLS`；迁移使用所有者角色。
+- 每个请求事务通过 `set_config('app.user_id'/'app.tenant_id', ..., true)` 注入上下文。
+- 租户创建与邀请接受通过 SECURITY DEFINER 函数完成，避免破坏 RLS 写策略。
+
+应用查询约束：
+
+1. 所有租户业务表包含 `tenant_id uuid NOT NULL`（已用于 Phase 1 各表）。
 2. 主键使用 `(tenant_id, id)` 复合键或带 tenant 的复合唯一约束；跨表引用使用复合外键 `(tenant_id, other_id)`，保证租户一致性。
 3. 每张租户表启用 `ROW LEVEL SECURITY`，策略比较 `tenant_id = current_setting('app.tenant_id', true)::uuid`。
 4. 每个事务执行 `SET LOCAL app.tenant_id = '<uuid>'`；连接池归还连接时上下文不得泄漏。推荐在 session/transaction 开始时通过服务端认证身份注入，绝不信任客户端传入的 `tenant_id`。
@@ -48,6 +68,6 @@ Phase 0 **未创建任何业务表**，以下为 Phase 1 必须遵守的约束�
 - 后续所有关键写操作必须在同一事务内写入审计/Outbox，避免“业务成功、事件丢失”。
 - 对象存储中的文件不属于数据库事务，采用“先写元数据草稿 → 上传 → 标记完成”的状态机。
 
-## 6. 数据模型（规划）
+## 6. 后续数据模型（规划）
 
 完整模型包括 tenants、users、tenant_memberships、members、departments、roles、permissions、agents、agent_sessions、agent_runs、agent_memories、agent_*、groups、messages、goals、tasks、skills、automations、audit_logs、outbox_events 等，详见实现总指令第十二章。Phase 0 不提前建表，避免在租户模型未定时产生不可逆迁移。

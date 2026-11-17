@@ -88,6 +88,31 @@
 - 破坏性变更必须升级 API 版本（`/api/v2`），不在 `/api/v1` 内改变既有字段语义。
 - 数据库与外部依赖不可用时，readiness 必须返回 503 而非 200，供编排器摘除流量。
 
-## 5. 后续模块
+## 5. Phase 1 已实现端点
+
+### 认证
+
+- `POST /api/v1/auth/register`、`POST /auth/login`、`POST /auth/refresh`、`POST /auth/logout`
+- `GET /auth/me`
+
+### 租户与组织
+
+- `GET/POST /api/v1/tenants`、`GET /tenants/{id}`
+- `GET/PATCH /tenant`（需 `X-Tenant-ID`）
+- `GET/POST /departments`、`PATCH/DELETE /departments/{id}`
+- `GET/POST /members`、`GET/PATCH /members/{id}`、`PUT /members/{id}/roles`
+- `GET /roles`、`GET /permissions`
+- `GET /invitations`、`POST /invitations`、`POST /invitations/accept`、`DELETE /invitations/{id}`
+- `GET /audit`
+
+除认证与租户外，租户端点都必须携带 `X-Tenant-ID`。服务端会校验成员关系并设置
+`app.tenant_id`；错误格式为 `{"error":{"code","message","details?"}}`。
+
+### WebSocket 认证
+
+`ws://localhost:8000/ws/v1?token=<access_token>`。缺少或无效 Token 会收到
+`{"type":"error","reason":"unauthorized"}` 并以 4401 关闭。
+
+## 6. 后续模块
 
 Phase 1–8 将依次增加 `auth`、`tenants`、`memberships`、`departments`、`members`、`agents`、`agent-sessions`、`agent-runs`、`agent-delegations`、`agent-memories`、`agent-tools`、`agent-skills`、`groups`、`messages`、`goals`、`tasks`、`automations`、`artifacts`、`takeovers`、`interventions`、`alerts`、`audit`、`models`、`files`。每增加一个模块，必须同时提供 OpenAPI、权限检查与审计。

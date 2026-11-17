@@ -19,7 +19,10 @@ if config.config_file_name is not None:
 
 # The database URL always comes from the shared environment contract; a
 # developer's alembic.ini never contains credentials that matter.
-config.set_main_option("sqlalchemy.url", OrgWeaveSettings().database_url)
+config.set_main_option(
+    "sqlalchemy.url",
+    OrgWeaveSettings().migration_database_url or OrgWeaveSettings().database_url,
+)
 
 target_metadata = Base.metadata
 

@@ -126,17 +126,8 @@ def test_request_id_header_is_echoed(client: TestClient) -> None:
     assert response.headers["x-request-id"] == "abc123"
 
 
-def test_websocket_handshake_and_ping(client: TestClient) -> None:
+def test_websocket_rejects_unauthenticated_connections(client: TestClient) -> None:
     with client.websocket_connect("/ws/v1") as websocket:
-        hello = websocket.receive_json()
-        assert hello["type"] == "hello"
-        assert hello["service"] == "orgweave-api"
-
-        websocket.send_json({"type": "ping"})
-        pong = websocket.receive_json()
-        assert pong["type"] == "pong"
-
-        websocket.send_text("not-json")
         error = websocket.receive_json()
         assert error["type"] == "error"
-        assert error["reason"] == "invalid_json"
+        assert error["reason"] == "unauthorized"

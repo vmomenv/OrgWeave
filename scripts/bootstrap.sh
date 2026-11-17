@@ -49,6 +49,9 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
+info "Ensuring application database role"
+bash scripts/db-bootstrap.sh
+
 info "Applying database migrations"
 make migrate
 

@@ -16,7 +16,7 @@ class OrgWeaveSettings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=(".env", "../.env"),
+        env_file=(".env", "../.env", "../../.env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -30,9 +30,17 @@ class OrgWeaveSettings(BaseSettings):
     api_port: int = 8000
     cors_origins: str = "http://localhost:3000"
 
+    # Authentication (development defaults; override in real deployments).
+    jwt_secret: str = "orgweave-dev-jwt-secret-change-in-production-please"
+    jwt_issuer: str = "orgweave"
+    access_token_ttl_seconds: int = 900
+    refresh_token_ttl_days: int = 30
+    invitation_ttl_hours: int = 72
+
     database_url: str = (
-        "postgresql+asyncpg://orgweave:orgweave_dev_password@localhost:5432/orgweave"
+        "postgresql+asyncpg://orgweave_app:orgweave_app_dev_password@localhost:5432/orgweave"
     )
+    migration_database_url: str | None = None
     redis_url: str = "redis://localhost:6379/0"
 
     temporal_host: str = "localhost:7233"
@@ -60,9 +68,11 @@ class OrgWeaveSettings(BaseSettings):
     agent_queue: str = "orgweave:agent:jobs"
     agent_dead_letter_queue: str = "orgweave:agent:dead-letter"
 
-    @field_validator("database_url")
+    @field_validator("database_url", "migration_database_url")
     @classmethod
-    def _validate_database_url(cls, value: str) -> str:
+    def _validate_database_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
         if not value.startswith("postgresql+asyncpg://"):
             raise ValueError("DATABASE_URL must use the postgresql+asyncpg:// scheme")
         return value

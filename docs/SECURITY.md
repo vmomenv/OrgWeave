@@ -2,7 +2,17 @@
 
 Phase 0 只建立基础设施安全底座。以下明确区分**已实施**与**待实施**。
 
-## 已实施
+## Phase 1 已实施
+
+- Argon2id 密码哈希；JWT access token 15 分钟；refresh token 仅存 SHA-256 哈希并轮换。
+- 前端令牌存储在 httpOnly + SameSite=Lax Cookie，不写入 localStorage；写操作 BFF 校验 Origin。
+- 非超级用户 `orgweave_app`（NOBYPASSRLS）+ FORCE RLS；租户上下文服务端派生。
+- RBAC 权限检查在路由依赖层执行；最后一名 Owner 不可被移除。
+- 邀请令牌只返回一次，数据库存哈希，按邮箱绑定，接受时校验过期与邮箱。
+- 审计记录登录、租户创建、部门/成员/角色/邀请变更。
+- WebSocket 必须携带有效 access token，否则关闭 4401。
+
+## Phase 0 已实施
 
 1. **密钥不入库**：`.env` 被 `.gitignore` 与 `.dockerignore` 排除；`.env.example` 只含开发占位值。
 2. **非 root 容器**：API、Web、全部 Worker 镜像以 uid 10001 运行。
@@ -19,8 +29,8 @@ Phase 0 只建立基础设施安全底座。以下明确区分**已实施**与**
 
 | 阶段 | 安全要求 |
 |---|---|
-| Phase 1 | 登录与会话安全、密码哈希、JWT/刷新令牌、租户上下文、RLS、应用账号无 `BYPASSRLS` |
-| Phase 1 | WebSocket 身份与订阅鉴权；禁止跨租户数据 |
+| Phase 2 | WebSocket 房间订阅鉴权与消息广播权限 |
+| Phase 3 | Agent 工具与委派权限 |
 | Phase 3 | Task Contract 服务端校验；模型不可扩权；工具调用二次授权 |
 | Phase 3 | 模型 Key 仅存安全凭据存储；不进入 Prompt/日志 |
 | Phase 5 | Skill Runner 文件系统/网络/CPU/内存/时间隔离；不可信代码不得运行在 API 进程 |

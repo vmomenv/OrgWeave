@@ -95,6 +95,13 @@ Phase 0 中 API 与 Worker 都是**真实进程**：API 通过 `/api/v1/health/r
 - 容器均以非 root（uid 10001）运行；API 与 Worker 镜像不挂载 Docker Socket。
 - Temporal 使用官方 auto-setup 开发服务；生产环境必须改为持久化部署。
 
+## 4.1 Phase 1 已实现
+
+- 认证：Argon2id + JWT access/refresh；Next.js BFF 使用 httpOnly Cookie。
+- 多租户：`X-Tenant-ID` 服务端校验 → 事务级 `app.tenant_id` → PostgreSQL FORCE RLS。
+- 组织：租户、成员（human/ai）、部门层级、角色/权限、邀请、审计。
+- 应用数据库账号与迁移账号分离，应用账号无 RLS 绕过能力。
+
 ## 5. Phase 0 之后的架构演进
 
 | 阶段 | 架构增量 |

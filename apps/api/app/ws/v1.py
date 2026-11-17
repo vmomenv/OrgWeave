@@ -1,9 +1,7 @@
-"""Minimal Phase 0 WebSocket endpoint.
+"""Authenticated Phase 1 WebSocket transport.
 
-Business events arrive in later phases. This endpoint only proves the /ws/v1
-transport works end-to-end (handshake, ping/pong, structured errors) and is
-intentionally read-only. Authentication is added together with Phase 1 login;
-no tenant or agent data is readable here.
+Only authenticated users may connect. No tenant data is exposed; message
+subscriptions arrive in Phase 2 and must re-check tenant membership.
 """
 
 from __future__ import annotations
@@ -11,9 +9,13 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
+import jwt
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.api.deps import set_user_context
 from app.core.config import get_settings
+from app.core.security import decode_access_token
+from app.models import User
 
 router = APIRouter()
 
@@ -27,12 +29,45 @@ def _frame(message_type: str, **payload: object) -> str:
     )
 
 
+async def _reject(websocket: WebSocket, reason: str) -> None:
+    await websocket.accept()
+    await websocket.send_text(_frame("error", reason=reason))
+    await websocket.close(code=4401)
+
+
 @router.websocket("/ws/v1")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     settings = get_settings()
+    token = websocket.query_params.get("token")
+    if not token:
+        await _reject(websocket, "unauthorized")
+        return
+
+    try:
+        user_id = decode_access_token(token)
+    except (jwt.InvalidTokenError, ValueError):
+        await _reject(websocket, "unauthorized")
+        return
+
+    factory = websocket.app.state.session_factory
+    async with factory() as session:  # type: AsyncSession
+        user = await session.get(User, user_id)
+        if user is None or not user.is_active:
+            await _reject(websocket, "unauthorized")
+            return
+        await set_user_context(session, user.id)
+        display_name = user.display_name
+
     await websocket.accept()
     await websocket.send_text(
-        _frame("hello", service="orgweave-api", version=settings.app_version, api="v1")
+        _frame(
+            "hello",
+            service="orgweave-api",
+            version=settings.app_version,
+            api="v1",
+            user_id=str(user_id),
+            display_name=display_name,
+        )
     )
     try:
         while True:
@@ -58,7 +93,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         "server.info",
                         service="orgweave-api",
                         version=settings.app_version,
-                        phase="0",
+                        phase="1",
                     )
                 )
             else:

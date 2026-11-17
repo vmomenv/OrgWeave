@@ -42,11 +42,19 @@ jobs:
   backend:
     name: Backend + integration tests
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://orgweave_app:orgweave_app_dev_password@localhost:5432/orgweave
+      MIGRATION_DATABASE_URL: postgresql+asyncpg://orgweave:orgweave_dev_password@localhost:5432/orgweave
     steps:
       - uses: actions/checkout@v4
 
       - name: Start infrastructure
         run: docker compose up -d --wait postgres redis temporal litellm minio
+
+      - name: Ensure application database role
+        run: |
+          docker compose exec -T postgres psql -v ON_ERROR_STOP=1 \
+            -U orgweave -d orgweave < infra/postgres/init/02-app-role.sql
 
       - uses: actions/setup-python@v5
         with:

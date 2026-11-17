@@ -50,9 +50,21 @@ export default function RootLayout({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="hidden text-xs text-muted-foreground sm:block">
-                Phase 0 · 基础设施
+            <div className="flex items-center gap-3">
+              <a
+                href="/workspace"
+                className="hidden text-xs text-muted-foreground transition-colors hover:text-foreground sm:block"
+              >
+                工作空间
+              </a>
+              <a
+                href="/status"
+                className="hidden text-xs text-muted-foreground transition-colors hover:text-foreground sm:block"
+              >
+                系统状态
+              </a>
+              <span className="hidden text-xs text-muted-foreground md:block">
+                Phase 1 · 组织与权限
               </span>
               <ThemeToggle />
             </div>

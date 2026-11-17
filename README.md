@@ -2,9 +2,20 @@
 
 **AI Organization Operating System** — 以组织架构为基础、以 AI 员工为执行主体、以人类管理员为控制中心的多租户 AI 企业操作系统。
 
-> **当前状态：Phase 0（项目基础设施）已完成。** 本阶段只交付可运行的基础设施，不包含认证、租户、组织、群聊、Agent Runtime 等业务功能。
+> **当前状态：Phase 1（用户、租户、组织架构与权限）已完成并验收。** 已包含认证、多租户、组织成员、部门、RBAC、邀请、审计与 PostgreSQL RLS。群聊（Phase 2）、Agent Runtime（Phase 3）尚未实现。
 
-## Phase 0 交付内容
+## 已交付
+
+### Phase 1：用户、租户、组织与权限
+
+- 注册/登录/刷新令牌轮换/登出；Argon2id + JWT。
+- 多租户创建与切换；`X-Tenant-ID` 服务端校验。
+- 部门层级（循环检测）、人类/AI 成员、角色分配、邀请令牌、审计日志。
+- PostgreSQL FORCE RLS，应用使用非超级用户 `orgweave_app`。
+- Web：登录/注册、租户工作空间、成员/部门/邀请/审计管理。
+- 认证 WebSocket。
+
+### Phase 0：项目基础设施
 
 - Next.js 15 + TypeScript + Tailwind CSS + shadcn/ui 系统控制台，展示实时依赖健康状态，支持深色/浅色主题。
 - FastAPI + SQLAlchemy 2 (async) + Pydantic v2 API，统一前缀 `/api/v1`，WebSocket 前缀 `/ws/v1`。
@@ -35,7 +46,7 @@
 ```bash
 cp .env.example .env
 
-# 一键：创建 venv、安装依赖、启动基础设施、执行迁移
+# 一键：创建 venv、安装依赖、启动基础设施、创建应用数据库角色、执行迁移
 make bootstrap
 
 # 方式 A：本机开发进程
@@ -133,7 +144,7 @@ scripts/                bootstrap / health / verify / worker / temporal smoke
 
 ## 已知限制（Phase 0 范围内）
 
-- 没有登录、用户、租户、成员或权限系统；计划 Phase 1。
+- 群聊、消息、Agent Runtime 等 Phase 2+ 功能尚未实现。
 - `/ws/v1` 仅提供无业务数据的握手与 ping/pong；认证与业务事件在 Phase 1/2 加入。
 - Agent Worker 只处理 `system.ping`，其余任务进入死信队列；真实 Agent Runtime 在 Phase 3。
 - Skill Runner **不执行任何代码**，避免在隔离机制完成前暴露执行面；执行能力在 Phase 5。
@@ -142,6 +153,9 @@ scripts/                bootstrap / health / verify / worker / temporal smoke
 
 ## 文档
 
+- [实施状态](docs/IMPLEMENTATION_STATUS.md)
+- [技术决策](docs/DECISIONS.md)
+- [测试报告](docs/TEST_REPORT.md)
 - [架构](docs/ARCHITECTURE.md)
 - [数据库](docs/DATABASE.md)
 - [API](docs/API.md)

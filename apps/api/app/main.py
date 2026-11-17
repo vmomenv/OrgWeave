@@ -13,7 +13,8 @@ from orgweave_shared.redis import create_redis
 
 from app.api.router import api_router
 from app.core.config import get_settings
-from app.core.db import create_engine
+from app.core.db import create_engine, create_session_factory
+from app.core.errors import register_error_handlers
 from app.infrastructure.health.probes import build_probes
 from app.infrastructure.storage import create_minio_client, ensure_bucket
 from app.ws.v1 import router as ws_router
@@ -48,6 +49,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         )
 
     app.state.engine = engine
+    app.state.session_factory = create_session_factory(engine)
     app.state.redis = redis_client
     app.state.minio = minio_client
     app.state.health_probes = build_probes(
@@ -94,3 +96,4 @@ async def request_id_middleware(request: Request, call_next):
 
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(ws_router)
+register_error_handlers(app)
