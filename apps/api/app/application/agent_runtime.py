@@ -162,6 +162,17 @@ async def execute_run(
         await session.commit()
         return
 
+    # A queued run may be cancelled after the job was dequeued but before it
+    # starts. Check both the database status and the durable cancel token.
+    await session.refresh(run)
+    if run.status != "queued" or await redis.get(CANCEL_KEY.format(run_id=run.id)):
+        if run.status == "queued":
+            run.status = "cancelled"
+            run.error = "cancelled_by_user"
+            run.completed_at = datetime.now(UTC)
+        await session.commit()
+        return
+
     limits = build_limits(agent, run.limits)
     allowed_tools = [name for name in agent.allowed_tools if name in TOOL_SCHEMAS]
     tools = tool_definitions(allowed_tools)
@@ -204,6 +215,9 @@ async def execute_run(
 
     try:
         for step in range(1, int(limits["max_steps"]) + 1):
+            await session.refresh(run)
+            if run.status != "running":
+                break
             if await redis.get(CANCEL_KEY.format(run_id=run.id)):
                 run.status = "cancelled"
                 run.error = "cancelled_by_user"

@@ -5,7 +5,7 @@
 
 ## 当前阶段
 
-**MVP Checkpoint：四 AI 员工完成真实软件开发任务 —— 下一步**
+**Phase 5：Skills、MCP 与 Skill Runner —— 下一步**
 
 ## 已完成
 
@@ -71,14 +71,23 @@
 - [x] 真实模型 E2E：CTO-AI 调用 delegate_task → Researcher-AI 独立 Session → 结果回传
 - 验证：69 passed；Phase 4 验收 13/13。
 
+### MVP Checkpoint（已完成，真实模型）
+
+- CTO-AI 自主调用 `delegate_task` 完成 3 次委派。
+- Researcher-AI：输出 ITAM 需求与验收标准。
+- Developer-AI：通过 `workspace_write_file` 交付 `asset_manager.py` 与 `test_asset_manager.py`。
+- QA-AI：调用 `run_tests` 在独立 Skill Runner 中执行 pytest，报告通过。
+- 共享工作区文件可读取；CTO 汇总。真实模型：DeepSeek `deepseek-flash`。
+- 验证脚本：`scripts/mvp_checkpoint.py` → MVP PASS。
+
 ## 进行中
 
-- MVP Checkpoint：CTO/Researcher/Developer/QA 四员工完成一个真实软件开发任务。
+- Phase 5：Skill Registry/Version、Agent Skill 安装、Skill Runner 权限与隔离、MCP 集成。
 
 ## 下一步
 
-MVP 需要：任务/目标下发（可先用 Session + 委派）、真实代码交付工具（文件写入 Sandbox/对象存储）、
-QA 执行真实测试、CTO 汇总。当前工具仅有组织/记忆/委派，需要新增代码交付与测试工具。
+Phase 5：skills/skill_versions/agent_skills 模型与 API → 内置示例 Skill → Agent 安装/启用 →
+运行时加载 Skill → Skill Runner 受控执行 → 测试与文档。
 
 ## 未解决问题
 

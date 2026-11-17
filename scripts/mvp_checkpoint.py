@@ -79,10 +79,10 @@ def main() -> int:
 
     agents = {item["member_name"]: item for item in client.get(f"{API}/api/v1/agents", headers=th).json()}
     model_aliases = {
-        "CTO-AI": "orgweave-fast",
-        "Researcher-AI": "orgweave-fast",
-        "Developer-AI": "orgweave-strong",
-        "QA-AI": "orgweave-fast",
+        "CTO-AI": "deepseek-flash",
+        "Researcher-AI": "deepseek-flash",
+        "Developer-AI": "deepseek-flash",
+        "QA-AI": "deepseek-flash",
     }
     for name, prompt in SYSTEM_PROMPTS.items():
         agent = agents[name]
@@ -195,12 +195,17 @@ def main() -> int:
         print(f"FILE {key} ({len(content)} bytes)")
         print(content[:1200])
 
+    qa_ok = any(
+        ("通过" in (delegation["summary"] or "") or "PASS" in (delegation["summary"] or "") or "passed" in (delegation["summary"] or ""))
+        for delegation in delegations
+    )
     completed = (
         body["status"] == "completed"
         and len(delegations) >= 3
         and all(delegation["status"] == "completed" for delegation in delegations)
         and any(key.endswith("asset_manager.py") for key in files)
         and any(key.endswith("test_asset_manager.py") for key in files)
+        and qa_ok
     )
     print("MVP", "PASS" if completed else "FAIL")
     return 0 if completed else 1

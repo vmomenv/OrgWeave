@@ -136,14 +136,18 @@ async def _check_litellm(settings: OrgWeaveSettings) -> DependencyCheck:
         timeout=settings.health_check_timeout_seconds,
         headers=headers,
     ) as client:
-        response = await client.get("/health/liveliness")
+        response = await client.get("/v1/models")
+        probe = "/v1/models"
+        if response.status_code == 404:
+            response = await client.get("/health/liveliness")
+            probe = "/health/liveliness"
     latency = (asyncio.get_running_loop().time() - started) * 1000
     ok = response.status_code == 200
     return DependencyCheck(
         name="litellm",
         status="ok" if ok else "error",
         latency_ms=round(latency, 2),
-        detail=f"http={response.status_code}",
+        detail=f"gateway={probe} http={response.status_code}",
     )
 
 

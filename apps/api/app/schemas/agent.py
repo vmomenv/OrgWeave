@@ -9,6 +9,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from app.application.tools import DEFAULT_TOOLS
+from app.core.config import get_settings
 
 MEMORY_TYPES = ("profile", "semantic", "episodic", "task", "procedural")
 
@@ -16,7 +17,11 @@ MEMORY_TYPES = ("profile", "semantic", "episodic", "task", "procedural")
 class AgentCreate(BaseModel):
     member_id: uuid.UUID
     system_prompt: str = Field(default="", max_length=8000)
-    model_alias: str = Field(default="orgweave-default", min_length=1, max_length=120)
+    model_alias: str = Field(
+        default_factory=lambda: get_settings().default_model_alias,
+        min_length=1,
+        max_length=120,
+    )
     temperature: float = Field(default=0.2, ge=0, le=2)
     max_output_tokens: int = Field(default=1024, ge=64, le=8192)
     max_steps: int = Field(default=8, ge=1, le=100)

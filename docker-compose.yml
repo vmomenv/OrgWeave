@@ -15,6 +15,7 @@ x-service-env: &service-env
   TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-orgweave-phase0}
   LITELLM_BASE_URL: ${EXTERNAL_LITELLM_BASE_URL:-http://litellm:4000}
   LITELLM_MASTER_KEY: ${EXTERNAL_LITELLM_MASTER_KEY:-sk-orgweave-dev-master-key}
+  DEFAULT_MODEL_ALIAS: ${DEFAULT_MODEL_ALIAS:-deepseek-flash}
   MINIO_ENDPOINT: minio:9000
   MINIO_SECURE: "false"
   MINIO_BUCKET: ${MINIO_BUCKET:-orgweave}
@@ -103,6 +104,7 @@ services:
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-orgweave-dev-master-key}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPSEEK_API_KEY: ${EXTERNAL_LITELLM_MASTER_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
     ports:

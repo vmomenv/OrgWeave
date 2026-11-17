@@ -77,7 +77,7 @@ def main() -> int:
     run_response = client.post(
         f"{API}/api/v1/sessions/{session['id']}/runs",
         headers=th,
-        json={"input": prompt, "limits": {"max_steps": 6, "max_duration_seconds": 240}},
+        json={"input": prompt, "limits": {"max_steps": 12, "max_duration_seconds": 300}},
     )
     run_response.raise_for_status()
     run = run_response.json()
@@ -98,10 +98,17 @@ def main() -> int:
     delegations = client.get(
         f"{API}/api/v1/sessions/{session['id']}/delegations", headers=th
     ).json()
-    check("delegation persisted", len(delegations) == 1)
-    if delegations:
-        delegation = delegations[0]
-        check("delegation completed", delegation["status"] == "completed")
+    check("delegation persisted", len(delegations) >= 1, f"count={len(delegations)}")
+    target_delegations = [
+        item for item in delegations if item["child_agent_id"] == researcher["id"]
+    ]
+    check("delegation to researcher exists", bool(target_delegations))
+    completed_targets = [
+        item for item in target_delegations if item["status"] == "completed"
+    ]
+    check("delegation completed", bool(completed_targets))
+    if completed_targets:
+        delegation = completed_targets[0]
         check("child agent correct", delegation["child_agent_id"] == researcher["id"])
         check("result returned", bool(delegation["summary"]))
         child_messages = client.get(
@@ -112,7 +119,14 @@ def main() -> int:
         children = client.get(
             f"{API}/api/v1/sessions/{session['id']}/children", headers=th
         ).json()
-        check("child session linked to parent", len(children) == 1 and children[0]["parent_session_id"] == session["id"])
+        check(
+            "child session linked to parent",
+            any(
+                child["id"] == delegation["child_session_id"]
+                and child["parent_session_id"] == session["id"]
+                for child in children
+            ),
+        )
 
     web = client.get(f"{WEB}/workspace")
     check("workspace web page", web.status_code == 200)

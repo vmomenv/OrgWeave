@@ -2,7 +2,24 @@
 
 > 只记录实际执行过的命令和结果。环境：本机 Docker Compose，2026-11-17。
 
-## Phase 4（当前）
+## MVP Checkpoint（当前）
+
+真实外部网关：`https://api.deepseek.com` / `deepseek-flash`。
+
+```bash
+python scripts/mvp_checkpoint.py
+# MVP PASS
+```
+
+证据：
+
+- CTO Run completed，3 个 `delegate_task` 工具调用。
+- Researcher/Developer/QA 三个 delegation 均 completed。
+- 工作区存在 `asset_manager.py`、`test_asset_manager.py`（MinIO 实际读取内容）。
+- QA delegation summary：pytest 通过（PASS）。
+- Developer 使用 workspace 工具交付代码；QA 使用隔离 Skill Runner 执行测试。
+
+## Phase 4（历史）
 
 ```bash
 ORGWEAVE_INTEGRATION=1 .venv/bin/python -m pytest -q

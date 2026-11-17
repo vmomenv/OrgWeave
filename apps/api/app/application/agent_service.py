@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.agent_runtime import build_limits
 from app.application.tools import DEFAULT_TOOLS, TOOL_SCHEMAS
+from app.core.config import OrgWeaveSettings
 from app.core.errors import ApiError
 from app.models import (
     AgentConfig,
@@ -72,7 +73,7 @@ async def ensure_agent_for_member(
         tenant_id=tenant_id,
         member_id=member.id,
         system_prompt="",
-        model_alias="orgweave-default",
+        model_alias=OrgWeaveSettings().default_model_alias,
         allowed_tools=list(DEFAULT_TOOLS),
     )
     session.add(agent)

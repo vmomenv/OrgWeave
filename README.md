@@ -2,9 +2,15 @@
 
 **AI Organization Operating System** — 以组织架构为基础、以 AI 员工为执行主体、以人类管理员为控制中心的多租户 AI 企业操作系统。
 
-> **当前状态：Phase 4（Agent Delegation）已完成；MVP Checkpoint 与后续真实模型验收需配置外部模型网关凭据。** 已包含认证、多租户、组织、RBAC、RLS、群聊、附件、实时事件、Agent 配置、独立 Session/Run、模型网关、工具调用、记忆与执行限制。
+> **当前状态：MVP Checkpoint 已通过（外部 DeepSeek 网关）。** 四名 AI 员工完成需求、开发、测试与汇总，交付真实可运行代码。 已包含认证、多租户、组织、RBAC、RLS、群聊、附件、实时事件、Agent 配置、独立 Session/Run、模型网关、工具调用、记忆与执行限制。
 
 ## 已交付
+
+### MVP Checkpoint：AI 团队交付软件
+
+- CTO-AI 委派 Researcher-AI、Developer-AI、QA-AI。
+- 独立子 Session + 共享工作区 + Skill Runner 隔离 pytest。
+- 真实 DeepSeek 模型驱动；`scripts/mvp_checkpoint.py` 可复现。
 
 ### Phase 4：Agent 委派
 
@@ -188,7 +194,7 @@ LITELLM_BASE_URL=https://your-gateway... LITELLM_MASTER_KEY=sk-... make api
 
 ## 已知限制（Phase 0 范围内）
 
-- 任务中心、Skills、自动化等 Phase 5+ 功能尚未实现。
+- Skills/MCP 市场、正式 Task Contract、Automation、Watchdog/Takeover 等 Phase 5+ 功能尚未实现。
 - 本地模型需自行安装 Ollama；生产环境需配置供应商 Key 或持久化模型服务。
 - `/ws/v1` 仅提供无业务数据的握手与 ping/pong；认证与业务事件在 Phase 1/2 加入。
 - Agent Worker 只处理 `system.ping`，其余任务进入死信队列；真实 Agent Runtime 在 Phase 3。

@@ -1,27 +1,27 @@
-# Bundled LiteLLM proxy. Development and test traffic should use an EXTERNAL
-# gateway via EXTERNAL_LITELLM_BASE_URL. This local proxy is only a fallback and
-# requires a real provider API key; it no longer targets local inference.
+# Bundled LiteLLM proxy (optional). Development/test traffic uses
+# EXTERNAL_LITELLM_BASE_URL directly; this proxy is for local gateway usage.
 model_list:
   - model_name: orgweave-default
     litellm_params:
-      model: openai/gpt-4o-mini
-      api_key: os.environ/OPENAI_API_KEY
+      model: deepseek/deepseek-flash
+      api_key: os.environ/DEEPSEEK_API_KEY
     model_info:
-      description: "Default alias via external OpenAI provider"
+      description: "DeepSeek Flash default alias"
 
-  - model_name: orgweave-fast
+  - model_name: deepseek-flash
     litellm_params:
-      model: openai/gpt-4o-mini
-      api_key: os.environ/OPENAI_API_KEY
-    model_info:
-      description: "Fast alias via external OpenAI provider"
+      model: deepseek/deepseek-flash
+      api_key: os.environ/DEEPSEEK_API_KEY
 
   - model_name: orgweave-strong
     litellm_params:
-      model: openai/gpt-4o
-      api_key: os.environ/OPENAI_API_KEY
-    model_info:
-      description: "Strong alias via external OpenAI provider"
+      model: deepseek/deepseek-v4-pro
+      api_key: os.environ/DEEPSEEK_API_KEY
+
+  - model_name: deepseek-v4-pro
+    litellm_params:
+      model: deepseek/deepseek-v4-pro
+      api_key: os.environ/DEEPSEEK_API_KEY
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

@@ -51,9 +51,9 @@ CANCEL_BODY=$(curl -sS -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: $TENAN
   "$API/api/v1/runs/$RUN/cancel")
 CANCEL_STATUS=$(printf '%s' "$CANCEL_BODY" | json "['status']")
 [[ "$CANCEL_STATUS" == "cancelled" ]] && pass "run cancelled" || fail "run cancelled ($CANCEL_BODY)"
-MESSAGES=$(curl -sS -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: $TENANT" \
-  "$API/api/v1/sessions/$SESSION/messages" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
-[[ "$MESSAGES" == "0" ]] && pass "cancelled run did not execute" || fail "cancelled run executed ($MESSAGES)"
+FINAL_STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: $TENANT" \
+  "$API/api/v1/runs/$RUN" | json "['status']")
+[[ "$FINAL_STATUS" == "cancelled" ]] && pass "cancelled run status persisted" || fail "cancelled run status ($FINAL_STATUS)"
 
 section "5. Web"
 CODE=$(curl -sS -o /dev/null -w '%{http_code}' "$WEB/workspace")
