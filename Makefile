@@ -29,7 +29,7 @@ env: ## Copy .env.example to .env when missing
 	@test -f .env || (cp .env.example .env && echo "Created .env from .env.example")
 
 infra: ## Start dependency services (Postgres, Redis, Temporal, LiteLLM, MinIO)
-	$(DC) -f $(COMPOSE_FILE) up -d postgres redis temporal temporal-ui litellm minio minio-init
+	$(DC) -f $(COMPOSE_FILE) up -d postgres redis temporal temporal-ui litellm minio
 
 up: ## Build and start the full stack
 	$(DC) -f $(COMPOSE_FILE) up -d --build

@@ -1,0 +1,29 @@
+# LiteLLM gateway configuration.
+#
+# The default alias targets a local Ollama server so the gateway and the full
+# stack start without any provider API key. Add provider models by setting the
+# matching environment variables and extending model_list; never commit keys.
+model_list:
+  - model_name: orgweave-default
+    litellm_params:
+      model: ollama_chat/llama3.1
+      api_base: os.environ/OLLAMA_BASE_URL
+    model_info:
+      description: "Phase 0 default alias (local Ollama, no API key required)"
+
+  - model_name: orgweave-fast
+    litellm_params:
+      model: ollama_chat/llama3.1
+      api_base: os.environ/OLLAMA_BASE_URL
+    model_info:
+      description: "Phase 0 fast alias for development smoke tests"
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  request_timeout: 60
+
+litellm_settings:
+  drop_params: true
+  num_retries: 2
+  request_timeout: 60
+  telemetry: false

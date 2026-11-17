@@ -1,0 +1,8 @@
+# Phase 0 dynamic configuration for the Temporal development cluster.
+# These keys keep history and task timeouts generous for local development.
+limit.maxIDLength:
+  - value: 255
+    constraints: {}
+system.forceSearchAttributesCacheRefreshOnRead:
+  - value: true
+    constraints: {}

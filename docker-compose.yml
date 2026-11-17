@@ -1,0 +1,294 @@
+name: orgweave
+
+x-app-env: &app-env
+  APP_ENV: ${APP_ENV:-development}
+  APP_VERSION: ${APP_VERSION:-0.1.0}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+x-service-env: &service-env
+  <<: *app-env
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-orgweave}:${POSTGRES_PASSWORD:-orgweave_dev_password}@postgres:5432/${POSTGRES_DB:-orgweave}
+  REDIS_URL: redis://redis:6379/0
+  TEMPORAL_HOST: temporal:7233
+  TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+  TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-orgweave-phase0}
+  LITELLM_BASE_URL: http://litellm:4000
+  LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-orgweave-dev-master-key}
+  MINIO_ENDPOINT: minio:9000
+  MINIO_SECURE: "false"
+  MINIO_BUCKET: ${MINIO_BUCKET:-orgweave}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:-orgweave}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:-orgweave_dev_minio_password}
+  HEALTH_CHECK_TIMEOUT_SECONDS: ${HEALTH_CHECK_TIMEOUT_SECONDS:-3}
+  WORKER_HEARTBEAT_INTERVAL_SECONDS: ${WORKER_HEARTBEAT_INTERVAL_SECONDS:-10}
+  WATCHDOG_STALE_AFTER_SECONDS: ${WATCHDOG_STALE_AFTER_SECONDS:-45}
+  WATCHDOG_SCAN_INTERVAL_SECONDS: ${WATCHDOG_SCAN_INTERVAL_SECONDS:-15}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-orgweave}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orgweave_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-orgweave}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orgweave} -d ${POSTGRES_DB:-orgweave}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  temporal:
+    image: temporalio/auto-setup:1.29.7
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-orgweave}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD:-orgweave_dev_password}
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"
+    volumes:
+      - ./infra/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "temporal:7233"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  temporal-ui:
+    image: temporalio/ui:2.34.0
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+      TEMPORAL_DEFAULT_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    command: ["--config", "/app/config.yaml", "--host", "0.0.0.0", "--port", "4000"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-orgweave-dev-master-key}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./infra/litellm/config.yaml:/app/config.yaml:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness', timeout=3)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-orgweave}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-orgweave_dev_minio_password}
+      MC_CONFIG_DIR: /tmp/.mc
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mc alias set local http://localhost:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD >/dev/null 2>&1 && mc ready local",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      litellm:
+        condition: service_started
+      minio:
+        condition: service_healthy
+    environment:
+      <<: *service-env
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/live', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_WS_BASE_URL: ${NEXT_PUBLIC_WS_BASE_URL:-ws://localhost:8000/ws/v1}
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_INTERNAL_URL: http://api:8000
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3000 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  agent-worker:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+      args:
+        WORKER_PATH: workers/agent-worker
+        WORKER_MODULE: orgweave_agent_worker
+        WORKER_NAME: agent-worker
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *service-env
+      WORKER_NAME: agent-worker
+      WORKER_QUEUE: ${AGENT_QUEUE:-orgweave:agent:jobs}
+    restart: unless-stopped
+
+  temporal-worker:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+      args:
+        WORKER_PATH: workers/temporal-worker
+        WORKER_MODULE: orgweave_temporal_worker
+        WORKER_NAME: temporal-worker
+    depends_on:
+      temporal:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *service-env
+      WORKER_NAME: temporal-worker
+    restart: unless-stopped
+
+  skill-runner:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+      args:
+        WORKER_PATH: workers/skill-runner
+        WORKER_MODULE: orgweave_skill_runner
+        WORKER_NAME: skill-runner
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *service-env
+      WORKER_NAME: skill-runner
+      SKILL_RUNNER_PORT: 8001
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8001/health/live', timeout=3)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    restart: unless-stopped
+
+  watchdog-worker:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+      args:
+        WORKER_PATH: workers/watchdog-worker
+        WORKER_MODULE: orgweave_watchdog_worker
+        WORKER_NAME: watchdog-worker
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *service-env
+      WORKER_NAME: watchdog-worker
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
