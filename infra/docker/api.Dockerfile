@@ -8,9 +8,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY packages/shared-python /src/packages/shared-python
+COPY packages/agent-sdk /src/packages/agent-sdk
 COPY apps/api /app
 
-RUN pip install --no-cache-dir /src/packages/shared-python /app
+RUN pip install --no-cache-dir /src/packages/shared-python /src/packages/agent-sdk /app
 
 RUN useradd --create-home --uid 10001 orgweave
 USER 10001

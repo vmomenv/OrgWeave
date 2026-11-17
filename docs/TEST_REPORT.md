@@ -25,6 +25,16 @@ pnpm --filter @orgweave/web typecheck && pnpm --filter @orgweave/web build
 模型测试使用本地确定性 OpenAI 兼容 stub（仅测试替身，不冒充真实模型）；
 真实模型调用尚未验收。
 
+Phase 3 验收脚本（Agent Worker 停止时验证队列/取消语义）：
+
+```bash
+bash scripts/verify-phase3.sh
+# Phase 3 verification: 8 passed, 0 failed
+```
+
+真实模型端到端使用 `ORGWEAVE_MODEL_E2E=1 bash scripts/verify-phase3.sh`，需先配置
+Ollama 或供应商 Key。
+
 ## Phase 2（历史）
 
 ```bash

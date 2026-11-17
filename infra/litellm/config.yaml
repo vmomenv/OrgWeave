@@ -6,14 +6,14 @@
 model_list:
   - model_name: orgweave-default
     litellm_params:
-      model: ollama_chat/llama3.1
+      model: ollama_chat/qwen2.5:1.5b
       api_base: os.environ/OLLAMA_BASE_URL
     model_info:
       description: "Phase 0 default alias (local Ollama, no API key required)"
 
   - model_name: orgweave-fast
     litellm_params:
-      model: ollama_chat/llama3.1
+      model: ollama_chat/qwen2.5:1.5b
       api_base: os.environ/OLLAMA_BASE_URL
     model_info:
       description: "Phase 0 fast alias for development smoke tests"
