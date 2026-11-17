@@ -65,6 +65,8 @@ class OrgWeaveSettings(BaseSettings):
     watchdog_scan_interval_seconds: float = Field(default=15.0, ge=1)
 
     skill_runner_port: int = 8001
+    skill_runner_base_url: str = "http://localhost:8001"
+    internal_service_token: str = "orgweave-internal-dev-token"
     agent_queue: str = "orgweave:agent:jobs"
     agent_dead_letter_queue: str = "orgweave:agent:dead-letter"
 

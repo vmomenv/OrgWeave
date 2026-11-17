@@ -28,6 +28,10 @@ DEFAULT_TOOLS = [
     "cancel_delegated_task",
     "send_message_to_agent",
     "request_agent_review",
+    "workspace_write_file",
+    "workspace_read_file",
+    "workspace_list_files",
+    "run_tests",
 ]
 
 
@@ -149,6 +153,41 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
                 "wait": {"type": "boolean", "default": True},
             },
             "required": ["content"],
+            "additionalProperties": False,
+        },
+    },
+    "workspace_write_file": {
+        "description": "Write a text file into the shared project workspace.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "minLength": 1, "maxLength": 300},
+                "content": {"type": "string", "maxLength": 200000},
+            },
+            "required": ["path", "content"],
+            "additionalProperties": False,
+        },
+    },
+    "workspace_read_file": {
+        "description": "Read a file from the shared project workspace.",
+        "parameters": {
+            "type": "object",
+            "properties": {"path": {"type": "string", "minLength": 1, "maxLength": 300}},
+            "required": ["path"],
+            "additionalProperties": False,
+        },
+    },
+    "workspace_list_files": {
+        "description": "List files in the shared project workspace.",
+        "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+    },
+    "run_tests": {
+        "description": "Run pytest on the shared workspace and return output.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "timeout_seconds": {"type": "integer", "minimum": 5, "maximum": 120, "default": 60}
+            },
             "additionalProperties": False,
         },
     },
@@ -420,6 +459,171 @@ async def _request_agent_review(context: ToolContext, arguments: dict[str, Any])
     )
 
 
+def _workspace_prefix(tenant_id: uuid.UUID, root_session_id: uuid.UUID) -> str:
+    return f"agent-workspaces/{tenant_id}/{root_session_id}/files"
+
+
+def _validate_path(path: str) -> str:
+    normalized = path.strip().replace("\\", "/").lstrip("/")
+    parts = [part for part in normalized.split("/") if part]
+    if not parts or any(part in {"..", "."} for part in parts):
+        raise ValueError("invalid workspace path")
+    if len(normalized) > 300:
+        raise ValueError("workspace path too long")
+    return "/".join(parts)
+
+
+async def _workspace_root(context: ToolContext) -> uuid.UUID:
+    from sqlalchemy import select
+
+    current = context.session_id
+    for _ in range(20):
+        parent = await context.session.scalar(
+            select(AgentSession.parent_session_id).where(
+                AgentSession.tenant_id == context.tenant_id,
+                AgentSession.id == current,
+            )
+        )
+        if parent is None:
+            return current
+        current = parent
+    return current
+
+
+def _minio(context: ToolContext):
+    from minio import Minio
+
+    if context.settings is None:
+        raise ValueError("storage unavailable")
+    return Minio(
+        context.settings.minio_endpoint,
+        access_key=context.settings.s3_access_key,
+        secret_key=context.settings.s3_secret_key,
+        secure=context.settings.minio_secure,
+    )
+
+
+async def _workspace_write_file(context: ToolContext, arguments: dict[str, Any]) -> dict[str, Any]:
+    import asyncio
+    import io
+
+    if context.settings is None:
+        raise ValueError("storage unavailable")
+    path = _validate_path(str(arguments.get("path", "")))
+    content = str(arguments.get("content", ""))
+    if len(content.encode("utf-8")) > 200_000:
+        raise ValueError("file too large (max 200KB)")
+    root = await _workspace_root(context)
+    key = f"{_workspace_prefix(context.tenant_id, root)}/{path}"
+    client = _minio(context)
+    await asyncio.to_thread(
+        client.put_object,
+        context.settings.minio_bucket,
+        key,
+        io.BytesIO(content.encode("utf-8")),
+        len(content.encode("utf-8")),
+        content_type="text/plain; charset=utf-8",
+    )
+    return {"path": path, "size": len(content.encode("utf-8")), "workspace_root": str(root)}
+
+
+async def _workspace_read_file(context: ToolContext, arguments: dict[str, Any]) -> dict[str, Any]:
+    import asyncio
+
+    if context.settings is None:
+        raise ValueError("storage unavailable")
+    path = _validate_path(str(arguments.get("path", "")))
+    root = await _workspace_root(context)
+    key = f"{_workspace_prefix(context.tenant_id, root)}/{path}"
+    client = _minio(context)
+
+    def read() -> str:
+        response = client.get_object(context.settings.minio_bucket, key)
+        try:
+            return response.read(200_001).decode("utf-8", errors="replace")
+        finally:
+            response.close()
+            response.release_conn()
+
+    try:
+        content = await asyncio.to_thread(read)
+    except Exception as exc:
+        raise ValueError(f"file not found: {path}") from exc
+    return {"path": path, "content": content[:200_000]}
+
+
+async def _workspace_list_files(context: ToolContext, _: dict[str, Any]) -> dict[str, Any]:
+    import asyncio
+
+    if context.settings is None:
+        raise ValueError("storage unavailable")
+    root = await _workspace_root(context)
+    prefix = f"{_workspace_prefix(context.tenant_id, root)}/"
+    client = _minio(context)
+
+    def list_objects() -> list[str]:
+        return [
+            item.object_name.removeprefix(prefix)
+            for item in client.list_objects(
+                context.settings.minio_bucket, prefix=prefix, recursive=True
+            )
+            if not item.is_dir
+        ]
+
+    files = await asyncio.to_thread(list_objects)
+    return {"workspace_root": str(root), "files": files}
+
+
+async def _run_tests(context: ToolContext, arguments: dict[str, Any]) -> dict[str, Any]:
+    import asyncio
+
+    import httpx
+
+    if context.settings is None:
+        raise ValueError("runner unavailable")
+    root = await _workspace_root(context)
+    prefix = f"{_workspace_prefix(context.tenant_id, root)}/"
+    client = _minio(context)
+
+    def collect() -> dict[str, str]:
+        files: dict[str, str] = {}
+        for item in client.list_objects(
+            context.settings.minio_bucket, prefix=prefix, recursive=True
+        ):
+            if item.is_dir or len(files) >= 50:
+                continue
+            response = client.get_object(context.settings.minio_bucket, item.object_name)
+            try:
+                files[item.object_name.removeprefix(prefix)] = response.read(200_001).decode(
+                    "utf-8", errors="replace"
+                )
+            finally:
+                response.close()
+                response.release_conn()
+        return files
+
+    files = await asyncio.to_thread(collect)
+    if not files:
+        raise ValueError("workspace has no files")
+    timeout = min(max(int(arguments.get("timeout_seconds", 60)), 5), 120)
+    async with httpx.AsyncClient(timeout=timeout + 10) as http:
+        response = await http.post(
+            f"{context.settings.skill_runner_base_url.rstrip('/')}/run-tests",
+            json={"files": files, "timeout_seconds": timeout},
+            headers={"X-Internal-Token": context.settings.internal_service_token},
+        )
+    if response.status_code != 200:
+        raise ValueError(f"runner error HTTP {response.status_code}")
+    result = response.json()
+    return {
+        "exit_code": result.get("exit_code"),
+        "passed": result.get("exit_code") == 0,
+        "stdout": str(result.get("stdout", ""))[-8000:],
+        "stderr": str(result.get("stderr", ""))[-4000:],
+        "duration_ms": result.get("duration_ms"),
+    }
+
+
 _HANDLERS: dict[str, ToolHandler] = {
     "get_current_time": _get_current_time,
     "list_team_members": _list_team_members,
@@ -432,6 +636,10 @@ _HANDLERS: dict[str, ToolHandler] = {
     "cancel_delegated_task": _cancel_delegated_task,
     "send_message_to_agent": _send_message_to_agent,
     "request_agent_review": _request_agent_review,
+    "workspace_write_file": _workspace_write_file,
+    "workspace_read_file": _workspace_read_file,
+    "workspace_list_files": _workspace_list_files,
+    "run_tests": _run_tests,
 }
 
 

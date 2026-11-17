@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Literal
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from orgweave_shared import (
     OrgWeaveSettings,
@@ -18,6 +18,7 @@ from orgweave_shared import (
     heartbeat_loop,
     write_heartbeat,
 )
+from pydantic import BaseModel, Field
 
 settings = OrgWeaveSettings()
 DEFAULT_WORKER_NAME = "skill-runner"
@@ -109,3 +110,75 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+class RunTestsRequest(BaseModel):
+    files: dict[str, str] = Field(default_factory=dict)
+    timeout_seconds: int = Field(default=60, ge=5, le=120)
+
+
+@app.post("/run-tests")
+async def run_tests(request: Request, body: RunTestsRequest) -> JSONResponse:
+    import subprocess
+    import sys
+    import tempfile
+    import time
+    from pathlib import Path
+
+    if request.headers.get("x-internal-token") != settings.internal_service_token:
+        return JSONResponse(status_code=401, content={"error": "unauthorized"})
+    if not body.files:
+        return JSONResponse(status_code=422, content={"error": "no_files"})
+    if len(body.files) > 50:
+        return JSONResponse(status_code=422, content={"error": "too_many_files"})
+    total = sum(len(content.encode("utf-8")) for content in body.files.values())
+    if total > 2 * 1024 * 1024:
+        return JSONResponse(status_code=413, content={"error": "workspace_too_large"})
+
+    tmp_root = Path(tempfile.mkdtemp(prefix="orgweave-tests-", dir="/tmp"))
+    try:
+        for relative, content in body.files.items():
+            candidate = (tmp_root / relative).resolve()
+            if not str(candidate).startswith(str(tmp_root.resolve()) + "/"):
+                return JSONResponse(status_code=422, content={"error": "invalid_path"})
+            candidate.parent.mkdir(parents=True, exist_ok=True)
+            candidate.write_text(content, encoding="utf-8")
+
+        started = time.perf_counter()
+        try:
+            completed = await asyncio.to_thread(
+                subprocess.run,
+                [
+                    "/bin/sh",
+                    "-c",
+                    (
+                        f"ulimit -t {body.timeout_seconds}; ulimit -v 524288; "
+                        f"exec {sys.executable} -m pytest -q"
+                    ),
+                ],
+                cwd=tmp_root,
+                capture_output=True,
+                text=True,
+                timeout=body.timeout_seconds,
+                env={"PATH": "/usr/local/bin:/usr/bin:/bin", "PYTHONPATH": str(tmp_root)},
+            )
+            exit_code = completed.returncode
+            stdout = completed.stdout[-20000:]
+            stderr = completed.stderr[-10000:]
+        except subprocess.TimeoutExpired:
+            exit_code = 124
+            stdout = ""
+            stderr = "test execution timed out"
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        return JSONResponse(
+            content={
+                "exit_code": exit_code,
+                "stdout": stdout,
+                "stderr": stderr,
+                "duration_ms": duration_ms,
+            }
+        )
+    finally:
+        import shutil
+
+        shutil.rmtree(tmp_root, ignore_errors=True)
