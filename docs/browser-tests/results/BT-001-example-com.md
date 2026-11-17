@@ -1,63 +1,58 @@
-# BT-001 — BrowserSkill connectivity and example.com smoke test
+# BT-001 — BrowserSkill MCP example.com smoke test
 
-- **Status:** BLOCKED
+- **Status:** PASS
 - **Date:** 2026-11-17
-- **Feature:** BrowserSkill MCP availability / basic browser observation
-- **Test account:** N/A (public page, no login)
-- **Tenant:** N/A
-- **Browser session:** not created
+- **Feature:** BrowserSkill MCP connectivity and basic browser observation
+- **Browser session:** `rrnl` (stopped after test)
+- **Browser:** Chrome 157.0.0.0, BrowserSkill extension 0.5.0, protocol 1.9
+- **Test account / tenant:** N/A (public page, no login)
 
-## Attempted steps and actual observations
+## Connection checks
 
-1. BrowserSkill MCP discovery
-   - `opencode mcp list` after configuration: `browser-skill` server present.
-   - MCP tools discovered: `bsk_session`, `bsk_page`, `bsk_inspect`, `bsk_interact`,
-     `bsk_plan`, `bsk_tabs`, `bsk_assist` (+ others).
-   - Result: **PASS** (MCP transport/tool discovery).
-2. CLI/daemon health
-   - `bsk doctor`:
-     - `ok daemon running`
-     - `ok protocol compatible`
-     - `FAIL extension connected — 0 browsers connected`
-   - Result: **FAIL**.
-3. Start dedicated browser session
-   - MCP call: `bsk_session({"action":"browsers"})`
-   - Actual response: `{"browsers":[]}`
-   - MCP call: `bsk_session({"action":"start","name":"example.com smoke","focus":false})`
-   - Actual response:
-     ```json
-     {"code":"no_browser_connected","exit_code":1,
-      "hint":"open the browser-skill extension in your browser and wait for the popup to show \"connected\"",
-      "message":"no browser is currently connected"}
-     ```
-   - Result: **BLOCKED** (`no_browser_connected`).
+- BrowserSkill MCP configured in `opencode.json` (`bsk mcp`); tools discovered.
+- `bsk_session({"action":"browsers"})` returned one connected Chrome instance (`533c3840`).
+- `bsk doctor`: daemon running, protocol compatible, extension connected.
 
-## Requested scenario
+## Actual user/browser steps
 
-| Step | Result |
-|---|---|
-| 1. Create new BrowserSkill session | BLOCKED |
-| 2. Open https://example.com | NOT EXECUTED |
-| 3. Get URL/title | NOT EXECUTED |
-| 4. Read visible text | NOT EXECUTED |
-| 5. Screenshot | NOT EXECUTED |
-| 6. Check obvious errors | NOT EXECUTED |
-| 7. Report browser operations | Only the blocked start call above |
-| 8. End session | No session to end |
+1. Created a dedicated BrowserSkill session:
+   `bsk_session(action=start, browser=533c3840, name="OrgWeave Browser QA - example.com")`
+   → `session_id=rrnl`, Agent Window `716109367`.
+2. Navigated:
+   `bsk_page(action=navigate, session=rrnl, url=https://example.com, wait_until=domcontentloaded)`
+   → `final_url=https://example.com/`, reached `domcontentloaded`.
+3. Synchronized and observed VOM:
+   `bsk_session(action=sync, session=rrnl, policy=target)`
+   → RootWebArea **"Example Domain"**, one `Learn more` link to iana.org.
+4. Read DOM fields:
+   `bsk_inspect(action=read)` → `page_url=https://example.com/`, `title="Example Domain"`,
+   first paragraph text returned (multilingual documentation notice).
+5. Captured screenshot:
+   `bsk_inspect(action=screenshot)` → PNG 937×979; saved as
+   `docs/browser-tests/screenshots/BT-001-example-com.png` (82 KB).
+6. Inspected Console:
+   `bsk_inspect(action=console, limit=100)` → **0 entries**, no errors.
+7. Inspected Network:
+   `bsk_inspect(action=network, limit=100)`:
+   - `GET https://example.com/` → 200, `text/html` (Document)
+   - `GET https://example.com/s.js` → 200, `text/javascript`
+   - data:image PNG response → 200
+   No failed requests.
+8. Stopped the session: `bsk_session(action=stop, session=rrnl)` → `{"stopped":["rrnl"]}`.
 
-## Evidence
+## Expected vs actual
 
-- No screenshot exists; no page was opened.
-- Console findings: N/A.
-- Network findings: N/A.
-- No HTTP request was used as a substitute for browser navigation.
+| Item | Expected | Actual |
+|---|---|---|
+| Page URL | `https://example.com/` | `https://example.com/` |
+| Title | `Example Domain` | `Example Domain` |
+| Visible text | Documentation example notice | Multilingual paragraphs + `Learn more` |
+| Screenshot | Captured | `screenshots/BT-001-example-com.png` (937×979) |
+| Console errors | None | 0 console entries |
+| Network failures | None | Document/script/image all 200 |
+| Session cleanup | Stopped | `{"stopped":["rrnl"]}` |
 
-## Defect
+## Result
 
-- **Defect ID:** BQA-ENV-001
-- **Type:** environment / setup, not an OrgWeave product defect
-- **Root cause:** no browser extension instance connected to the local BrowserSkill daemon.
-- **Resolution (user action):** install/enable the BrowserSkill extension in Chrome or Edge,
-  keep that browser window open, and confirm the extension popup shows **Connected**.
-- **Reproduce after fix:** run `bsk doctor`; `extension connected` must be `ok`. Then rerun
-  BT-001. Only after that may this test be marked PASS/FAIL.
+**PASS.** BrowserSkill MCP was used for every browser action; no HTTP/source-reading
+substitute was used. No password, cookie, token, or secret was recorded.

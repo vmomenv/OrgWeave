@@ -30,5 +30,6 @@ Never store passwords, access tokens, cookies, or secrets.
 ## Status
 
 - MCP connectivity: configured and tools discovered.
-- Browser extension connection: **BLOCKED** (no connected browser).
-- All browser E2E tests: **BLOCKED** until the extension is connected.
+- Browser extension connection: **CONNECTED** (Chrome 157, extension 0.5.0).
+- BT-001 example.com smoke test: **PASS**; session stopped.
+- OrgWeave browser E2E: pending; use this workflow for each user-facing phase.
