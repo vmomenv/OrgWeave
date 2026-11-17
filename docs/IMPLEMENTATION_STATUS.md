@@ -43,7 +43,7 @@
 - [x] 前端群聊界面（会话列表、消息、提及、附件）
 - 验证：59 passed；Phase 2 验收脚本 9/9。
 
-### Phase 3（已完成，已验证；真实模型 E2E 待本地模型就绪）
+### Phase 3（已完成，已验证，含真实模型 E2E）
 
 - [x] AgentConfig（System Prompt、模型别名、温度、工具白名单、所有硬限制）
 - [x] Agent Session / Run / Session 消息 / Tool Call / Memory 数据模型与 RLS
@@ -55,8 +55,8 @@
 - [x] API：agents/sessions/runs/tools/memories
 - [x] 前端 AI 员工工作台（会话、执行、工具调用、记忆、配置）
 - [x] 测试：66 passed；含真实 Worker 适配器与工具循环、限制、取消、会话隔离
-- 说明：运行时使用确定性 OpenAI 兼容测试服务验证；真实模型调用（Ollama/付费 Key）
-  尚未完成最终验收，不能声称 MVP 模型能力已通过。
+- 真实模型端到端：Ollama qwen2.5:1.5b → LiteLLM → Agent Worker → get_current_time 工具
+  → 最终回答，`ORGWEAVE_MODEL_E2E=1` 验收 9/9。
 
 ## 进行中
 
@@ -69,7 +69,7 @@ API/前端任务树 → 测试。之后进入 MVP Checkpoint。
 
 ## 未解决问题
 
-- 当前环境没有可用的真实模型供应商 API Key，也没有本地 Ollama。Phase 3 的真实模型调用验收需要用户提供凭据或启动本地模型服务；在此之前可完成 Runtime/工具/委派实现与确定性工具测试，但不能声称 MVP 模型调用已验收。
+- 本地模型依赖 Ollama 运行（qwen2.5:1.5b）；生产环境需配置供应商 Key 或持久化模型服务。
 - 角色目前为全局系统模板（owner/admin/member），租户自定义角色在后续阶段补充。
 - 头像上传和成员搜索分页为简化实现。
 - 生产部署、外部消息发送、付费 API 调用需人工授权。

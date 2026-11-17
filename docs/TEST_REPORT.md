@@ -22,18 +22,19 @@ pnpm --filter @orgweave/web typecheck && pnpm --filter @orgweave/web build
 - 两个 Session 消息严格隔离。
 - Agent Worker 的 `handle_agent_run` 真实处理排队 Job。
 
-模型测试使用本地确定性 OpenAI 兼容 stub（仅测试替身，不冒充真实模型）；
-真实模型调用尚未验收。
+单元/集成测试使用确定性 OpenAI 兼容 stub 验证边界条件；真实模型已使用
+Ollama `qwen2.5:1.5b` + LiteLLM 完成端到端验收。
 
-Phase 3 验收脚本（Agent Worker 停止时验证队列/取消语义）：
+Phase 3 验收脚本（真实模型，本地 Ollama qwen2.5:1.5b 经 LiteLLM）：
 
 ```bash
-bash scripts/verify-phase3.sh
-# Phase 3 verification: 8 passed, 0 failed
+ORGWEAVE_MODEL_E2E=1 bash scripts/verify-phase3.sh
+# Phase 3 verification: 9 passed, 0 failed
+# 真实 Run: completed, steps=2, tools=1, tokens=899
+# 输出: 当前时间是2026-11-17T03:26:36.565679+00:00。
 ```
 
-真实模型端到端使用 `ORGWEAVE_MODEL_E2E=1 bash scripts/verify-phase3.sh`，需先配置
-Ollama 或供应商 Key。
+这证明真实模型调用、LiteLLM 网关、Agent Worker 队列、工具调用与结果回写链路可用。
 
 ## Phase 2（历史）
 

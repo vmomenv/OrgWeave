@@ -59,7 +59,7 @@
 
 已知限制：移除群成员对已建立 WebSocket 连接在重连后才生效；附件仅单文件上传。
 
-## Phase 3：Agent Runtime — ✅ 已完成（真实模型 E2E 待就绪）
+## Phase 3：Agent Runtime — ✅ 已完成（含真实模型 E2E）
 
 Agent 配置、Session/Run、模型调用、工具、上下文、记忆、执行限制、状态管理。
 
@@ -72,7 +72,7 @@ Agent 配置、Session/Run、模型调用、工具、上下文、记忆、执行
 - Agent Worker 消费 `agent.run` 队列，真实执行工具循环。
 - API + AI 员工工作台前端。
 - 测试：66 passed（确定性 OpenAI 兼容服务验证循环/限制/取消/Worker）。
-- 未完成：真实模型端到端（无 Key；等待本地 Ollama）。
+- 真实模型端到端：Ollama qwen2.5:1.5b + LiteLLM + Worker + 工具调用，9/9 通过。
 
 ## Phase 4：Agent Delegation（下一步）
 

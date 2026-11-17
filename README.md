@@ -2,7 +2,7 @@
 
 **AI Organization Operating System** — 以组织架构为基础、以 AI 员工为执行主体、以人类管理员为控制中心的多租户 AI 企业操作系统。
 
-> **当前状态：Phase 3（Agent Runtime）已完成并通过自动化测试；真实模型端到端验收等待本地模型或用户提供的模型凭据。** 已包含认证、多租户、组织、RBAC、RLS、群聊、附件、实时事件、Agent 配置、独立 Session/Run、模型网关、工具调用、记忆与执行限制。
+> **当前状态：Phase 3（Agent Runtime）已完成，并通过真实模型端到端验收（Ollama + LiteLLM）。** 已包含认证、多租户、组织、RBAC、RLS、群聊、附件、实时事件、Agent 配置、独立 Session/Run、模型网关、工具调用、记忆与执行限制。
 
 ## 已交付
 
@@ -160,10 +160,23 @@ scripts/                bootstrap / health / verify / worker / temporal smoke
 - MinIO 社区镜像已从 Docker Hub 移除，本项目使用 Chainguard 维护的 `cgr.dev/chainguard/minio`。对象桶由 API 启动时幂等创建。
 - 生产环境不得使用 Temporal 开发模式；Phase 0 仅用于本地开发。
 
+## 本地模型（可选）
+
+默认模型别名 `orgweave-default` 指向本地 Ollama。安装并启动后：
+
+```bash
+# 安装 Ollama（示例：Linux 解压包方式或官方安装脚本）
+ollama serve
+ollama pull qwen2.5:1.5b
+```
+
+Docker 内的 LiteLLM 通过 `host.docker.internal:11434` 访问宿主 Ollama；
+`.env` 的 `OLLAMA_BASE_URL` 可调整。没有模型时系统仍可启动，Agent Run 会明确失败。
+
 ## 已知限制（Phase 0 范围内）
 
 - Agent 委派、任务、Skills、自动化等 Phase 4+ 功能尚未实现。
-- 真实模型调用尚未完成本机验收（缺少本地模型/付费 Key）。
+- 本地模型需自行安装 Ollama；生产环境需配置供应商 Key 或持久化模型服务。
 - `/ws/v1` 仅提供无业务数据的握手与 ping/pong；认证与业务事件在 Phase 1/2 加入。
 - Agent Worker 只处理 `system.ping`，其余任务进入死信队列；真实 Agent Runtime 在 Phase 3。
 - Skill Runner **不执行任何代码**，避免在隔离机制完成前暴露执行面；执行能力在 Phase 5。
