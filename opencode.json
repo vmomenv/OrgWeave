@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "browser-skill": {
+      "type": "local",
+      "command": ["/home/spark/.local/bin/bsk", "mcp"],
+      "enabled": true
+    }
+  }
+}
