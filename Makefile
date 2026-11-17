@@ -65,8 +65,8 @@ test-integration: ## Run integration tests (requires make infra)
 	$(PY) -m pytest -m integration
 
 lint: ## Run backend lint plus frontend lint/typecheck
-	$(VENV)/bin/ruff check apps/api packages workers scripts
-	$(VENV)/bin/ruff format --check apps/api packages workers scripts
+	$(VENV)/bin/ruff check apps/api packages workers scripts conftest.py
+	$(VENV)/bin/ruff format --check apps/api packages workers scripts conftest.py
 	pnpm lint
 	pnpm typecheck
 
