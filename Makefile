@@ -9,7 +9,7 @@ DC ?= docker compose
 COMPOSE_FILE := docker-compose.yml
 
 .PHONY: help bootstrap install env infra up down restart logs ps health migrate migrate-down \
-        seed test test-unit test-integration lint format api web workers temporal-test clean
+        seed test test-unit test-integration lint format api web workers workers-stop temporal-test clean
 
 help: ## Show available commands
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -82,6 +82,9 @@ web: ## Run web app natively
 
 workers: ## Run all workers natively in the background (logs in .data/logs)
 	@bash scripts/run-workers.sh
+
+workers-stop: ## Stop natively running workers
+	@bash scripts/stop-workers.sh
 
 temporal-test: ## Execute the Phase 0 Temporal ping workflow end-to-end
 	$(PY) scripts/temporal_smoke.py

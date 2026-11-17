@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "orgweave-agent-worker"
+version = "0.1.0"
+description = "OrgWeave Agent Worker (Phase 0 skeleton)"
+requires-python = ">=3.11"
+dependencies = [
+  "orgweave-shared",
+  "orgweave-agent-sdk",
+  "redis>=5.2,<6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/orgweave_agent_worker"]

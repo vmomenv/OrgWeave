@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "orgweave-watchdog-worker"
+version = "0.1.0"
+description = "OrgWeave Watchdog Worker (Phase 0 skeleton)"
+requires-python = ">=3.11"
+dependencies = [
+  "orgweave-shared",
+  "redis>=5.2,<6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/orgweave_watchdog_worker"]

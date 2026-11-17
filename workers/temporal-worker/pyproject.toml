@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "orgweave-temporal-worker"
+version = "0.1.0"
+description = "OrgWeave Temporal Worker (Phase 0 skeleton)"
+requires-python = ">=3.11"
+dependencies = [
+  "orgweave-shared",
+  "temporalio>=1.9,<2",
+  "redis>=5.2,<6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/orgweave_temporal_worker"]

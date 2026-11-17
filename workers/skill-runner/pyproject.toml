@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "orgweave-skill-runner"
+version = "0.1.0"
+description = "OrgWeave Skill Runner (Phase 0 skeleton)"
+requires-python = ">=3.11"
+dependencies = [
+  "orgweave-shared",
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.34,<1",
+  "redis>=5.2,<6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/orgweave_skill_runner"]
