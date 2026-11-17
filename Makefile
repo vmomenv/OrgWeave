@@ -9,7 +9,7 @@ DC ?= docker compose
 COMPOSE_FILE := docker-compose.yml
 
 .PHONY: help bootstrap install env infra up down restart logs ps health migrate migrate-down \
-        seed test test-unit test-integration lint format api web workers workers-stop temporal-test clean
+        test test-unit test-integration lint format api web workers workers-stop temporal-test verify clean
 
 help: ## Show available commands
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'

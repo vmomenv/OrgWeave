@@ -1,30 +1,16 @@
-"""Shared pytest configuration.
-
-Integration tests require real infrastructure:
-    sg docker -c "make infra"   # or docker compose up -d ...
-    make migrate
-    ORGWEAVE_INTEGRATION=1 pytest -m integration
-"""
+"""Shared pytest configuration for API tests."""
 
 from __future__ import annotations
 
-import os
+from collections.abc import Iterator
 
 import pytest
+from app.main import app
+from fastapi.testclient import TestClient
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _integration_gate() -> None:
-    """Fail loudly when integration tests are requested without infrastructure."""
-    if os.environ.get("ORGWEAVE_INTEGRATION") == "1":
-        return
-    return
-
-
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    if os.environ.get("ORGWEAVE_INTEGRATION") == "1":
-        return
-    skip = pytest.mark.skip(reason="set ORGWEAVE_INTEGRATION=1 and start docker compose")
-    for item in items:
-        if "integration" in item.keywords:
-            item.add_marker(skip)
+@pytest.fixture
+def client() -> Iterator[TestClient]:
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
