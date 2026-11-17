@@ -10,6 +10,7 @@ import {
   Layers,
   Loader2,
   LogOut,
+  MessageSquare,
   Plus,
   RefreshCw,
   ScrollText,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ChatPanel } from "@/components/workspace/chat-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,10 +48,11 @@ import type {
 } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "members" | "departments" | "audit";
+type Tab = "overview" | "chat" | "members" | "departments" | "audit";
 
 const TABS: { id: Tab; label: string; icon: typeof Activity }[] = [
   { id: "overview", label: "概览", icon: Activity },
+  { id: "chat", label: "群聊", icon: MessageSquare },
   { id: "members", label: "成员", icon: Users },
   { id: "departments", label: "部门", icon: Layers },
   { id: "audit", label: "审计", icon: ScrollText },
@@ -452,6 +455,16 @@ export function Workspace() {
                 departmentCount={departments.length}
                 auditCount={audit.length}
                 invitationCount={invitations.filter((item) => item.status === "pending").length}
+              />
+            ) : null}
+
+            {tab === "chat" && context ? (
+              <ChatPanel
+                key={tenantId}
+                tenantId={context.id}
+                currentMemberId={context.member_id}
+                members={members}
+                canManage={canManageMembers}
               />
             ) : null}
 

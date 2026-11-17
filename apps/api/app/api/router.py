@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     audit,
     auth,
+    chat,
     health,
     invitations,
     members,
@@ -22,5 +23,6 @@ api_router.include_router(organization.router)
 api_router.include_router(members.router)
 api_router.include_router(invitations.router)
 api_router.include_router(audit.router)
+api_router.include_router(chat.router)
 
 __all__ = ["api_router"]

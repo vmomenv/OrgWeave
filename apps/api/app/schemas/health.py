@@ -32,7 +32,7 @@ class ReadinessResponse(BaseModel):
 class MetaResponse(BaseModel):
     name: str = "OrgWeave"
     api_version: str = "v1"
-    phase: str = "0"
+    phase: str = "1"
     version: str
     api_prefix: str = "/api/v1"
     ws_prefix: str = "/ws/v1"

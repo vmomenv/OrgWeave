@@ -16,11 +16,11 @@ async function proxy(request: NextRequest, segments: string[]) {
   const headers = new Headers();
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
-  const tenant = request.headers.get("x-tenant-id");
+  const tenant = request.headers.get("x-tenant-id") ?? url.searchParams.get("tenant_id");
   if (tenant) headers.set("x-tenant-id", tenant);
 
   const method = request.method.toUpperCase();
-  const body = method === "GET" || method === "HEAD" ? undefined : await request.text();
+  const body = method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer();
   const { response, newTokens } = await apiFetch(request, target, {
     method,
     headers,

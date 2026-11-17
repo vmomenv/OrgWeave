@@ -49,6 +49,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         )
 
     app.state.engine = engine
+    app.state.settings = settings
     app.state.session_factory = create_session_factory(engine)
     app.state.redis = redis_client
     app.state.minio = minio_client

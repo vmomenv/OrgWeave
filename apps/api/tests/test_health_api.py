@@ -106,7 +106,7 @@ def test_meta_endpoint(client: TestClient) -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert body["phase"] == "0"
+    assert body["phase"] == "1"
     assert body["api_prefix"] == "/api/v1"
     assert body["ws_prefix"] == "/ws/v1"
 

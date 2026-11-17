@@ -141,3 +141,76 @@ export type AuditLog = {
   metadata: Record<string, unknown>;
   created_at: string;
 };
+
+
+export type GroupMemberInfo = {
+  member_id: string;
+  display_name: string;
+  member_type: string;
+  title: string | null;
+  role: string;
+  joined_at: string;
+  last_read_at: string | null;
+};
+
+export type Attachment = {
+  id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  created_at: string;
+};
+
+export type MemberRef = {
+  id: string;
+  display_name: string;
+  member_type: string;
+};
+
+export type Message = {
+  id: string;
+  group_id: string;
+  sender: MemberRef;
+  content: string;
+  content_type: string;
+  parent_message_id: string | null;
+  mentions: MemberRef[];
+  attachments: Attachment[];
+  metadata: Record<string, unknown>;
+  created_at: string;
+  edited_at: string | null;
+};
+
+export type Group = {
+  id: string;
+  name: string | null;
+  group_type: "channel" | "direct";
+  created_at: string;
+  updated_at: string;
+  members: GroupMemberInfo[];
+  last_message: Message | null;
+  unread_count: number;
+};
+
+export async function uploadAttachment(
+  groupId: string,
+  file: File,
+  tenantId: string,
+): Promise<Attachment> {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await fetch(`/api/proxy/groups/${groupId}/attachments`, {
+    method: "POST",
+    headers: { "X-Tenant-ID": tenantId },
+    body: form,
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new ApiClientError(
+      response.status,
+      payload?.error?.code ?? "upload_failed",
+      payload?.error?.message ?? "附件上传失败",
+    );
+  }
+  return payload as Attachment;
+}
