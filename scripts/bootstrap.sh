@@ -16,6 +16,8 @@ if [[ ! -f .env ]]; then
   cp .env.example .env
   info "Created .env from .env.example"
 fi
+# shellcheck disable=SC1091
+set -a; source .env; set +a
 
 if ! command -v pnpm >/dev/null; then
   if command -v corepack >/dev/null; then

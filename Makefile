@@ -18,7 +18,7 @@ bootstrap: ## Create .env, virtualenv, install all dependencies
 	@bash scripts/bootstrap.sh
 
 install: ## Install Python + Node dependencies
-	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
+	@bash scripts/ensure-venv.sh
 	$(PIP) install --upgrade pip
 	$(PIP) install -e packages/shared-python -e packages/agent-sdk -e packages/skill-sdk -e apps/api
 	$(PIP) install -e workers/agent-worker -e workers/temporal-worker -e workers/skill-runner -e workers/watchdog-worker
