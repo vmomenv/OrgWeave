@@ -4,9 +4,8 @@ import json
 from datetime import UTC, datetime
 
 import pytest
-from pydantic import ValidationError
-
 from orgweave_shared.settings import OrgWeaveSettings
+from pydantic import ValidationError
 
 
 def test_settings_have_working_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
