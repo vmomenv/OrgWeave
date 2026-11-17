@@ -5,7 +5,7 @@
 
 ## 当前阶段
 
-**Phase 4：Agent Delegation、并行执行与任务依赖 —— 下一步**
+**MVP Checkpoint：四 AI 员工完成真实软件开发任务 —— 下一步**
 
 ## 已完成
 
@@ -58,14 +58,27 @@
 - 真实模型端到端：Ollama qwen2.5:1.5b → LiteLLM → Agent Worker → get_current_time 工具
   → 最终回答，`ORGWEAVE_MODEL_E2E=1` 验收 9/9。
 
+### Phase 4（已完成，已验证，含真实模型 E2E）
+
+- [x] AgentConfig 委派策略（allowed_agent_ids、max_delegation_depth）
+- [x] agent_delegations 表、RLS、父子 Session 关联
+- [x] 服务端授权：目标必须同租户、AI 启用、非自身、白名单、层级限制
+- [x] 工具：list_available_agents、delegate_task、get_task_status、get_task_result、
+      send_message_to_agent、request_agent_review、cancel_delegated_task
+- [x] 同步委派（子 Run 立即执行并返回结果）与异步委派（入队 + 后续查询）
+- [x] 子 Session 独立上下文；完成后 Delegation 更新并向父 Session 写入通知
+- [x] API：Session delegations/children、Delegation 详情；前端委派卡片
+- [x] 真实模型 E2E：CTO-AI 调用 delegate_task → Researcher-AI 独立 Session → 结果回传
+- 验证：69 passed；Phase 4 验收 13/13。
+
 ## 进行中
 
-- 准备 Phase 4：Agent 委派、子 Session、并行执行与任务依赖。
+- MVP Checkpoint：CTO/Researcher/Developer/QA 四员工完成一个真实软件开发任务。
 
 ## 下一步
 
-Phase 4：委派数据模型/迁移 → 授权校验 → 委派工具 → 子 Session 执行 →
-API/前端任务树 → 测试。之后进入 MVP Checkpoint。
+MVP 需要：任务/目标下发（可先用 Session + 委派）、真实代码交付工具（文件写入 Sandbox/对象存储）、
+QA 执行真实测试、CTO 汇总。当前工具仅有组织/记忆/委派，需要新增代码交付与测试工具。
 
 ## 未解决问题
 

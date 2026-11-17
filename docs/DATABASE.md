@@ -85,6 +85,13 @@ RLS 实际配置：
 - `agent_memories`（5 类记忆、重要度、来源 Session）。
 - 全部启用 FORCE RLS，复合外键保证同租户。
 
+## 5.3 Phase 4 表（已实现）
+
+- `agent_configs.max_delegation_depth`、`allowed_agent_ids`。
+- `agent_delegations`：父 Run/Session/Agent、子 Agent/Session/Run、task、状态、
+  summary/result/error；RLS；子 Session 唯一约束。
+- 子 Session 使用 `agent_sessions.parent_session_id` 形成执行树。
+
 ## 6. 后续数据模型（规划）
 
 完整模型包括 tenants、users、tenant_memberships、members、departments、roles、permissions、agents、agent_sessions、agent_runs、agent_memories、agent_*、groups、messages、goals、tasks、skills、automations、audit_logs、outbox_events 等，详见实现总指令第十二章。Phase 0 不提前建表，避免在租户模型未定时产生不可逆迁移。

@@ -2,9 +2,16 @@
 
 **AI Organization Operating System** — 以组织架构为基础、以 AI 员工为执行主体、以人类管理员为控制中心的多租户 AI 企业操作系统。
 
-> **当前状态：Phase 3（Agent Runtime）已完成，并通过真实模型端到端验收（Ollama + LiteLLM）。** 已包含认证、多租户、组织、RBAC、RLS、群聊、附件、实时事件、Agent 配置、独立 Session/Run、模型网关、工具调用、记忆与执行限制。
+> **当前状态：Phase 4（Agent Delegation）已完成，并通过真实模型端到端验收（Ollama + LiteLLM）。** 已包含认证、多租户、组织、RBAC、RLS、群聊、附件、实时事件、Agent 配置、独立 Session/Run、模型网关、工具调用、记忆与执行限制。
 
 ## 已交付
+
+### Phase 4：Agent 委派
+
+- 服务端授权的 Agent 委派（白名单、层级、同租户、AI 启用）。
+- 独立子 Session/Run、同步与异步委派、结果回传、父 Session 通知。
+- API 执行树查询；前端委派卡片。
+- 真实模型 E2E：CTO-AI 委派 Researcher-AI 并汇总结果。
 
 ### Phase 3：Agent Runtime
 
@@ -175,7 +182,7 @@ Docker 内的 LiteLLM 通过 `host.docker.internal:11434` 访问宿主 Ollama；
 
 ## 已知限制（Phase 0 范围内）
 
-- Agent 委派、任务、Skills、自动化等 Phase 4+ 功能尚未实现。
+- 任务中心、Skills、自动化等 Phase 5+ 功能尚未实现。
 - 本地模型需自行安装 Ollama；生产环境需配置供应商 Key 或持久化模型服务。
 - `/ws/v1` 仅提供无业务数据的握手与 ping/pong；认证与业务事件在 Phase 1/2 加入。
 - Agent Worker 只处理 `system.ping`，其余任务进入死信队列；真实 Agent Runtime 在 Phase 3。

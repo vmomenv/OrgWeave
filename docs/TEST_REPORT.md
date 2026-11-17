@@ -2,7 +2,25 @@
 
 > 只记录实际执行过的命令和结果。环境：本机 Docker Compose，2026-11-17。
 
-## Phase 3（当前）
+## Phase 4（当前）
+
+```bash
+ORGWEAVE_INTEGRATION=1 .venv/bin/python -m pytest -q
+# 69 passed
+.venv/bin/python scripts/verify_phase4.py
+# Phase 4 verification: 13 passed, 0 failed
+```
+
+覆盖：
+
+- 委派工具自动出现在 Agent 配置；服务端白名单与层级校验。
+- 同步委派：父 Run tool_call → 独立子 Session/Run → 子模型回答 → 结果回传父工具。
+- 异步委派：wait=false 入队，Worker 处理后 Delegation 完成、父 Session 收到通知。
+- 越权委派工具调用失败且不创建 Delegation。
+- 父/子 Session 消息隔离；API delegations/children。
+- 真实模型：Ollama qwen2.5:1.5b → CTO-AI → delegate_task → Researcher-AI → 汇总，13/13。
+
+## Phase 3（历史）
 
 ```bash
 ORGWEAVE_INTEGRATION=1 .venv/bin/python -m pytest -q

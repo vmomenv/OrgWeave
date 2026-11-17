@@ -15,16 +15,18 @@ from app.api.deps import (
     get_session,
     get_tenant_context,
     require_permission,
+    set_tenant_context,
 )
 from app.application import agent_service
 from app.application.agent_runtime import CANCEL_KEY
 from app.application.audit import record_audit
 from app.core.errors import ApiError
-from app.models import AgentMemory, AgentSession, Member
+from app.models import AgentDelegation, AgentMemory, AgentSession, Member
 from app.schemas.agent import (
     AgentCreate,
     AgentOut,
     AgentUpdate,
+    DelegationOut,
     MemoryCreate,
     MemoryOut,
     RunCreate,
@@ -121,6 +123,10 @@ async def update_agent(
         metadata={"fields": sorted(body.model_fields_set)},
     )
     await session.commit()
+    await set_tenant_context(session, context.tenant_id)
+    await session.refresh(agent)
+    if member is not None:
+        await session.refresh(member)
     return agent_service.serialize_agent(agent, member)  # type: ignore[arg-type]
 
 
@@ -339,6 +345,98 @@ async def cancel_run(
     )
     await session.commit()
     return agent_service.run_out(run)
+
+
+def _delegation_out(row: AgentDelegation) -> DelegationOut:
+    return DelegationOut(
+        id=row.id,
+        parent_run_id=row.parent_run_id,
+        parent_session_id=row.parent_session_id,
+        parent_agent_id=row.parent_agent_id,
+        child_agent_id=row.child_agent_id,
+        child_session_id=row.child_session_id,
+        child_run_id=row.child_run_id,
+        task=row.task,
+        status=row.status,
+        summary=row.summary,
+        result=row.result,
+        error=row.error,
+        created_at=row.created_at,
+        completed_at=row.completed_at,
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/delegations",
+    response_model=list[DelegationOut],
+    summary="Delegations created by a session",
+)
+async def list_session_delegations(
+    session_id: uuid.UUID,
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> list[DelegationOut]:
+    await agent_service.get_session(session, context.tenant_id, session_id)
+    rows = (
+        await session.scalars(
+            select(AgentDelegation)
+            .where(
+                AgentDelegation.tenant_id == context.tenant_id,
+                AgentDelegation.parent_session_id == session_id,
+            )
+            .order_by(AgentDelegation.created_at)
+        )
+    ).all()
+    await session.commit()
+    return [_delegation_out(row) for row in rows]
+
+
+@router.get(
+    "/sessions/{session_id}/children",
+    response_model=list[SessionOut],
+    summary="Child sessions created by delegation",
+)
+async def list_child_sessions(
+    session_id: uuid.UUID,
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> list[SessionOut]:
+    await agent_service.get_session(session, context.tenant_id, session_id)
+    rows = (
+        await session.scalars(
+            select(AgentSession)
+            .where(
+                AgentSession.tenant_id == context.tenant_id,
+                AgentSession.parent_session_id == session_id,
+            )
+            .order_by(AgentSession.created_at)
+        )
+    ).all()
+    result = [await agent_service.session_out(session, row) for row in rows]
+    await session.commit()
+    return result
+
+
+@router.get(
+    "/delegations/{delegation_id}",
+    response_model=DelegationOut,
+    summary="Get a delegation",
+)
+async def get_delegation_detail(
+    delegation_id: uuid.UUID,
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> DelegationOut:
+    row = await session.scalar(
+        select(AgentDelegation).where(
+            AgentDelegation.tenant_id == context.tenant_id,
+            AgentDelegation.id == delegation_id,
+        )
+    )
+    if row is None:
+        raise ApiError(404, "delegation_not_found", "委派任务不存在")
+    await session.commit()
+    return _delegation_out(row)
 
 
 @router.get(

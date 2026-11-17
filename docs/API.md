@@ -140,6 +140,20 @@ Run 的限制（max_steps、max_duration、token_budget、max_tool_calls、
 max_consecutive_failures）由服务端存储并由 Worker 执行，模型无法扩大。
 错误统一返回 `{"error":{"code","message"}}`。
 
-## 8. 后续模块
+## 8. Phase 4 已实现端点
+
+- `GET /sessions/{id}/delegations`（父 Session 发起的委派）
+- `GET /sessions/{id}/children`（子 Session 执行树）
+- `GET /delegations/{id}`
+
+Agent 工具（由模型调用，服务端执行）：
+`list_available_agents`、`delegate_task`、`get_task_status`、`get_task_result`、
+`send_message_to_agent`、`request_agent_review`、`cancel_delegated_task`。
+
+委派校验：同租户、目标为 AI 成员、AI 启用、非自身、`allowed_agent_ids` 白名单、
+`max_delegation_depth` 层级限制。`wait=true` 时同步执行子 Run 并返回结果；
+`wait=false` 时入队 Agent Worker。
+
+## 9. 后续模块
 
 Phase 1–8 将依次增加 `auth`、`tenants`、`memberships`、`departments`、`members`、`agents`、`agent-sessions`、`agent-runs`、`agent-delegations`、`agent-memories`、`agent-tools`、`agent-skills`、`groups`、`messages`、`goals`、`tasks`、`automations`、`artifacts`、`takeovers`、`interventions`、`alerts`、`audit`、`models`、`files`。每增加一个模块，必须同时提供 OpenAPI、权限检查与审计。

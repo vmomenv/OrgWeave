@@ -28,7 +28,7 @@ async def handle_agent_run(
             text("SELECT set_config('app.tenant_id', :tenant_id, true)"),
             {"tenant_id": str(tenant_id)},
         )
-        await execute_run(session, redis, settings, run_id)
+        await execute_run(session, redis, settings, run_id, session_factory=session_factory)
     logger.info(
         "agent run processed",
         extra={"worker": settings.worker_name, "task_id": str(run_id)},

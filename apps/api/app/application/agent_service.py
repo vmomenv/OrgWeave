@@ -47,6 +47,8 @@ def serialize_agent(agent: AgentConfig, member: Member) -> AgentOut:
         cost_budget_usd=float(agent.cost_budget_usd),
         max_tool_calls=agent.max_tool_calls,
         max_consecutive_failures=agent.max_consecutive_failures,
+        max_delegation_depth=agent.max_delegation_depth,
+        allowed_agent_ids=agent.allowed_agent_ids,
         allowed_tools=agent.allowed_tools,
         memory_enabled=agent.memory_enabled,
         created_at=agent.created_at,
@@ -121,6 +123,8 @@ async def create_agent(
         cost_budget_usd=body.cost_budget_usd,
         max_tool_calls=body.max_tool_calls,
         max_consecutive_failures=body.max_consecutive_failures,
+        max_delegation_depth=body.max_delegation_depth,
+        allowed_agent_ids=body.allowed_agent_ids,
         allowed_tools=validate_tools(body.allowed_tools),
         memory_enabled=body.memory_enabled,
     )
@@ -142,6 +146,7 @@ async def update_agent(session: AsyncSession, agent: AgentConfig, body: AgentUpd
         "cost_budget_usd",
         "max_tool_calls",
         "max_consecutive_failures",
+        "max_delegation_depth",
         "memory_enabled",
     ):
         if field in fields:
@@ -150,6 +155,8 @@ async def update_agent(session: AsyncSession, agent: AgentConfig, body: AgentUpd
                 setattr(agent, field, value)
     if "allowed_tools" in fields and body.allowed_tools is not None:
         agent.allowed_tools = validate_tools(body.allowed_tools)
+    if "allowed_agent_ids" in fields and body.allowed_agent_ids is not None:
+        agent.allowed_agent_ids = body.allowed_agent_ids
     await session.flush()
     return agent
 

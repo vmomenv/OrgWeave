@@ -10,6 +10,7 @@ import {
   Save,
   Send,
   Wrench,
+  GitBranch,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ import type {
   AgentRun,
   AgentSession,
   AgentToolCall,
+  Delegation,
   SessionMessage,
 } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -70,6 +72,7 @@ export function AgentPanel({
   const [input, setInput] = useState("");
   const [run, setRun] = useState<AgentRun | null>(null);
   const [tools, setTools] = useState<AgentToolCall[]>([]);
+  const [delegations, setDelegations] = useState<Delegation[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<Partial<Agent>>({});
@@ -105,6 +108,17 @@ export function AgentPanel({
     async (id: string) => {
       const data = await api.get<SessionMessage[]>(`sessions/${id}/messages`, tenantId);
       setMessages(data);
+    },
+    [tenantId],
+  );
+
+  const loadDelegations = useCallback(
+    async (id: string) => {
+      const data = await api.get<Delegation[]>(
+        `sessions/${id}/delegations`,
+        tenantId,
+      );
+      setDelegations(data);
     },
     [tenantId],
   );
@@ -168,12 +182,13 @@ export function AgentPanel({
       setMessages([]);
       setRun(null);
       setTools([]);
+      setDelegations([]);
       return;
     }
     let cancelled = false;
     (async () => {
       try {
-        await loadMessages(sessionId);
+        await Promise.all([loadMessages(sessionId), loadDelegations(sessionId)]);
       } catch (loadError) {
         if (!cancelled) setError(errorMessage(loadError));
       }
@@ -181,7 +196,7 @@ export function AgentPanel({
     return () => {
       cancelled = true;
     };
-  }, [sessionId, loadMessages]);
+  }, [sessionId, loadMessages, loadDelegations]);
 
   useEffect(() => {
     if (!run || !["queued", "running"].includes(run.status)) {
@@ -196,6 +211,7 @@ export function AgentPanel({
           if (pollTimer.current) clearInterval(pollTimer.current);
           if (sessionId) {
             await loadMessages(sessionId);
+            await loadDelegations(sessionId);
             if (agentId) await loadMemories(agentId);
           }
           const toolList = await api.get<AgentToolCall[]>(
@@ -211,7 +227,7 @@ export function AgentPanel({
     return () => {
       if (pollTimer.current) clearInterval(pollTimer.current);
     };
-  }, [run, tenantId, sessionId, agentId, loadMessages, loadMemories]);
+  }, [run, tenantId, sessionId, agentId, loadMessages, loadMemories, loadDelegations]);
 
   async function createSession() {
     if (!agentId) return;
@@ -476,6 +492,53 @@ export function AgentPanel({
               ) : null}
             </div>
           </Card>
+
+          {delegations.length > 0 ? (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-xs">
+                  <GitBranch className="h-3.5 w-3.5" aria-hidden />
+                  委派任务 · {delegations.length}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                {delegations.map((delegation) => {
+                  const target = agents.find(
+                    (item) => item.id === delegation.child_agent_id,
+                  );
+                  return (
+                    <div key={delegation.id} className="rounded border p-2 text-[11px]">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">
+                          {target?.member_name ?? delegation.child_agent_id.slice(0, 8)}
+                        </span>
+                        <Badge
+                          variant={
+                            delegation.status === "completed"
+                              ? "success"
+                              : delegation.status === "failed"
+                                ? "destructive"
+                                : "warning"
+                          }
+                        >
+                          {STATUS_LABELS[delegation.status] ?? delegation.status}
+                        </Badge>
+                      </div>
+                      <p className="mt-0.5 line-clamp-2 text-muted-foreground">
+                        {delegation.task}
+                      </p>
+                      {delegation.summary ? (
+                        <p className="mt-1 line-clamp-3">{delegation.summary}</p>
+                      ) : null}
+                      <p className="mt-1 font-mono text-[9px] text-muted-foreground">
+                        child session {delegation.child_session_id.slice(0, 8)}
+                      </p>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          ) : null}
 
           {tools.length > 0 ? (
             <Card>

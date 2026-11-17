@@ -14,10 +14,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 from redis.asyncio import Redis
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.tools import (
+    TOOL_SCHEMAS,
     ToolContext,
     execute_tool,
     parse_arguments,
@@ -135,6 +136,8 @@ async def execute_run(
     redis: Redis,
     settings: OrgWeaveSettings,
     run_id: uuid.UUID,
+    *,
+    session_factory: Any | None = None,
 ) -> None:
     """Execute one queued run. Caller must set app.tenant_id first."""
     run = await session.get(AgentRun, run_id)
@@ -160,11 +163,7 @@ async def execute_run(
         return
 
     limits = build_limits(agent, run.limits)
-    allowed_tools = [
-        name
-        for name in agent.allowed_tools
-        if name in {"get_current_time", "list_team_members", "remember", "search_memory"}
-    ]
+    allowed_tools = [name for name in agent.allowed_tools if name in TOOL_SCHEMAS]
     tools = tool_definitions(allowed_tools)
 
     started = datetime.now(UTC)
@@ -194,6 +193,11 @@ async def execute_run(
         tenant_id=run.tenant_id,
         agent_id=agent.id,
         session_id=run.session_id,
+        parent_run_id=run.id,
+        parent_agent=agent,
+        session_factory=session_factory,
+        redis=redis,
+        settings=settings,
     )
     consecutive_failures = 0
     assistant_output = ""
@@ -338,6 +342,10 @@ async def execute_run(
         else:
             await _fail_run(session, run, agent_session, "max_steps_exceeded")
 
+        from app.application.delegation import finalize_delegations
+
+        await finalize_delegations(session, run)
+
         if run.status == "completed" and agent.memory_enabled and assistant_output:
             session.add(
                 AgentMemory(
@@ -351,7 +359,6 @@ async def execute_run(
                 )
             )
 
-        await session.execute(text("DELETE FROM agent_runs WHERE false"))  # keep txn open
         await session.commit()
     except Exception as exc:
         logger.exception("agent run crashed")

@@ -2,6 +2,7 @@
 
 from app.models.agent import (
     AgentConfig,
+    AgentDelegation,
     AgentMemory,
     AgentRun,
     AgentSession,
@@ -18,6 +19,7 @@ from app.models.tenant import Department, Invitation, Member, Tenant, TenantMemb
 
 __all__ = [
     "AgentConfig",
+    "AgentDelegation",
     "AgentMemory",
     "AgentRun",
     "AgentSession",

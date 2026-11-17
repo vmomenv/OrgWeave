@@ -304,3 +304,20 @@ export type AgentMemory = {
   metadata: Record<string, unknown>;
   created_at: string;
 };
+
+export type Delegation = {
+  id: string;
+  parent_run_id: string;
+  parent_session_id: string;
+  parent_agent_id: string;
+  child_agent_id: string;
+  child_session_id: string;
+  child_run_id: string | null;
+  task: string;
+  status: string;
+  summary: string | null;
+  result: Record<string, unknown> | null;
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+};

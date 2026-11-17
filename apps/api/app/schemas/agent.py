@@ -6,7 +6,9 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
+
+from app.application.tools import DEFAULT_TOOLS
 
 MEMORY_TYPES = ("profile", "semantic", "episodic", "task", "procedural")
 
@@ -23,14 +25,9 @@ class AgentCreate(BaseModel):
     cost_budget_usd: float = Field(default=5, ge=0, le=10000)
     max_tool_calls: int = Field(default=20, ge=0, le=200)
     max_consecutive_failures: int = Field(default=3, ge=1, le=20)
-    allowed_tools: list[str] = Field(
-        default_factory=lambda: [
-            "get_current_time",
-            "list_team_members",
-            "remember",
-            "search_memory",
-        ]
-    )
+    max_delegation_depth: int = Field(default=2, ge=0, le=10)
+    allowed_agent_ids: list[str] = Field(default_factory=lambda: ["*"])
+    allowed_tools: list[str] = Field(default_factory=lambda: list(DEFAULT_TOOLS))
     memory_enabled: bool = True
 
 
@@ -45,6 +42,8 @@ class AgentUpdate(BaseModel):
     cost_budget_usd: float | None = Field(default=None, ge=0, le=10000)
     max_tool_calls: int | None = Field(default=None, ge=0, le=200)
     max_consecutive_failures: int | None = Field(default=None, ge=1, le=20)
+    max_delegation_depth: int | None = Field(default=None, ge=0, le=10)
+    allowed_agent_ids: list[str] | None = None
     allowed_tools: list[str] | None = None
     memory_enabled: bool | None = None
 
@@ -65,6 +64,8 @@ class AgentOut(BaseModel):
     cost_budget_usd: float
     max_tool_calls: int
     max_consecutive_failures: int
+    max_delegation_depth: int
+    allowed_agent_ids: list[str]
     allowed_tools: list[str]
     memory_enabled: bool
     created_at: datetime
@@ -100,10 +101,6 @@ class RunLimits(BaseModel):
     token_budget: int | None = Field(default=None, ge=100, le=10_000_000)
     max_tool_calls: int | None = Field(default=None, ge=0, le=200)
     max_consecutive_failures: int | None = Field(default=None, ge=1, le=20)
-
-    @model_validator(mode="after")
-    def _at_least_one(self) -> RunLimits:
-        return self
 
 
 class RunCreate(BaseModel):
@@ -144,6 +141,23 @@ class ToolCallOut(BaseModel):
     arguments: dict[str, Any]
     result: dict[str, Any] | None
     status: str
+    error: str | None
+    created_at: datetime
+    completed_at: datetime | None
+
+
+class DelegationOut(BaseModel):
+    id: uuid.UUID
+    parent_run_id: uuid.UUID
+    parent_session_id: uuid.UUID
+    parent_agent_id: uuid.UUID
+    child_agent_id: uuid.UUID
+    child_session_id: uuid.UUID
+    child_run_id: uuid.UUID | None
+    task: str
+    status: str
+    summary: str | None
+    result: dict[str, Any] | None
     error: str | None
     created_at: datetime
     completed_at: datetime | None

@@ -74,7 +74,7 @@ Agent 配置、Session/Run、模型调用、工具、上下文、记忆、执行
 - 测试：66 passed（确定性 OpenAI 兼容服务验证循环/限制/取消/Worker）。
 - 真实模型端到端：Ollama qwen2.5:1.5b + LiteLLM + Worker + 工具调用，9/9 通过。
 
-## Phase 4：Agent Delegation（下一步）
+## Phase 4：Agent Delegation — ✅ 已完成（含真实模型 E2E）
 
 员工调用员工、独立 Child Session、异步/并行/依赖/取消/结果回传、委派权限。
 

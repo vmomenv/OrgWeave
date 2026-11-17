@@ -60,6 +60,10 @@ class AgentConfig(Base):
     cost_budget_usd: Mapped[float] = mapped_column(Numeric(10, 4), nullable=False, default=5)
     max_tool_calls: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
     max_consecutive_failures: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    max_delegation_depth: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
+    allowed_agent_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[\"*\"]'::jsonb")
+    )
     allowed_tools: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, server_default=text("'[]'::jsonb")
     )
@@ -270,3 +274,66 @@ class AgentMemory(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     last_accessed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentDelegation(Base):
+    __tablename__ = "agent_delegations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "parent_run_id"],
+            ["agent_runs.tenant_id", "agent_runs.id"],
+            ondelete="CASCADE",
+            name="fk_delegation_parent_run_same_tenant",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "parent_session_id"],
+            ["agent_sessions.tenant_id", "agent_sessions.id"],
+            ondelete="CASCADE",
+            name="fk_delegation_parent_session_same_tenant",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "child_session_id"],
+            ["agent_sessions.tenant_id", "agent_sessions.id"],
+            ondelete="CASCADE",
+            name="fk_delegation_child_session_same_tenant",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "parent_agent_id"],
+            ["agent_configs.tenant_id", "agent_configs.id"],
+            ondelete="CASCADE",
+            name="fk_delegation_parent_agent_same_tenant",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "child_agent_id"],
+            ["agent_configs.tenant_id", "agent_configs.id"],
+            ondelete="CASCADE",
+            name="fk_delegation_child_agent_same_tenant",
+        ),
+        CheckConstraint(
+            "status IN ('queued','running','completed','failed','cancelled')",
+            name="ck_delegation_status",
+        ),
+        Index("ix_delegation_parent_session", "tenant_id", "parent_session_id"),
+        Index("ix_delegation_child_agent", "tenant_id", "child_agent_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    parent_run_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    parent_session_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    parent_agent_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    child_agent_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    child_session_id: Mapped[uuid.UUID] = mapped_column(unique=True, nullable=False)
+    child_run_id: Mapped[uuid.UUID | None] = mapped_column()
+    task: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="queued")
+    summary: Mapped[str | None] = mapped_column(Text)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

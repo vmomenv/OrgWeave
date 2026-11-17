@@ -160,7 +160,13 @@ async def _execute(settings: OrgWeaveSettings, tenant_id: str, run_id: str) -> N
                 text("SELECT set_config('app.tenant_id', :t, true)"),
                 {"t": tenant_id},
             )
-            await execute_run(session, redis, settings, uuid.UUID(run_id))
+            await execute_run(
+                session,
+                redis,
+                settings,
+                uuid.UUID(run_id),
+                session_factory=factory,
+            )
     finally:
         await redis.aclose()
         await engine.dispose()
@@ -370,3 +376,251 @@ def test_agent_worker_processes_queued_job(client: TestClient, model_stub: str) 
     body = client.get(f"/api/v1/runs/{run['id']}", headers=setup["headers"]).json()
     assert body["status"] == "completed", body
     assert body["output"] == "Worker 执行完成"
+
+
+def _setup_two_agents(client: TestClient) -> dict:
+    email = f"{_unique('deleg')}@example.com"
+    registered = client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": PASSWORD, "display_name": "Delegation Owner"},
+    ).json()
+    headers = {"Authorization": f"Bearer {registered['access_token']}"}
+    tenant = client.post(
+        "/api/v1/tenants", headers=headers, json={"name": _unique("委派企业")}
+    ).json()
+    tenant_headers = {**headers, "X-Tenant-ID": tenant["id"]}
+    for name, title in (("CTO-AI", "CTO"), ("Researcher-AI", "研究员")):
+        response = client.post(
+            "/api/v1/members",
+            headers=tenant_headers,
+            json={
+                "member_type": "ai",
+                "display_name": name,
+                "title": title,
+                "role_keys": ["admin"],
+            },
+        )
+        assert response.status_code == 201, response.text
+    agents = client.get("/api/v1/agents", headers=tenant_headers).json()
+    by_name = {agent["member_name"]: agent for agent in agents}
+    return {
+        "headers": tenant_headers,
+        "tenant_id": tenant["id"],
+        "cto": by_name["CTO-AI"],
+        "researcher": by_name["Researcher-AI"],
+    }
+
+
+def test_synchronous_delegation_creates_child_session_and_returns_result(
+    client: TestClient, model_stub: str
+) -> None:
+    setup = _setup_two_agents(client)
+    session = client.post(
+        f"/api/v1/agents/{setup['cto']['id']}/sessions",
+        headers=setup["headers"],
+        json={"title": "CTO 项目会话"},
+    ).json()
+    run = _create_run(client, setup, session["id"], "请把需求调研委派给 Researcher")
+
+    StubModelHandler.responses.extend(
+        [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_delegate_1",
+                        "type": "function",
+                        "function": {
+                            "name": "delegate_task",
+                            "arguments": json.dumps(
+                                {
+                                    "agent_id": setup["researcher"]["id"],
+                                    "task": "调研 IT 资产管理的核心需求",
+                                    "wait": True,
+                                }
+                            ),
+                        },
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": "调研完成：需要资产台账、生命周期与审计。",
+                "tool_calls": [],
+            },
+            {
+                "role": "assistant",
+                "content": "CTO 汇总：已收到调研结果，项目可以启动。",
+                "tool_calls": [],
+            },
+        ]
+    )
+
+    asyncio.run(_execute(_runtime_settings(model_stub), setup["tenant_id"], run["id"]))
+
+    body = client.get(f"/api/v1/runs/{run['id']}", headers=setup["headers"]).json()
+    assert body["status"] == "completed", body
+    assert "CTO 汇总" in body["output"]
+
+    tools = client.get(f"/api/v1/runs/{run['id']}/tools", headers=setup["headers"]).json()
+    assert len(tools) == 1
+    assert tools[0]["tool_name"] == "delegate_task"
+    assert tools[0]["status"] == "completed"
+    assert tools[0]["result"]["status"] == "completed"
+
+    delegations = client.get(
+        f"/api/v1/sessions/{session['id']}/delegations", headers=setup["headers"]
+    ).json()
+    assert len(delegations) == 1
+    delegation = delegations[0]
+    assert delegation["status"] == "completed"
+    assert delegation["child_agent_id"] == setup["researcher"]["id"]
+    assert "资产台账" in (delegation["summary"] or "")
+
+    children = client.get(
+        f"/api/v1/sessions/{session['id']}/children", headers=setup["headers"]
+    ).json()
+    assert len(children) == 1
+    assert children[0]["id"] == delegation["child_session_id"]
+    assert children[0]["parent_session_id"] == session["id"]
+
+    child_messages = client.get(
+        f"/api/v1/sessions/{delegation['child_session_id']}/messages",
+        headers=setup["headers"],
+    ).json()
+    assert any(
+        message["role"] == "assistant" and "资产台账" in message["content"]
+        for message in child_messages
+    )
+
+    parent_messages = client.get(
+        f"/api/v1/sessions/{session['id']}/messages", headers=setup["headers"]
+    ).json()
+    assert any(
+        message["role"] == "system" and "子 Agent" in message["content"]
+        for message in parent_messages
+    )
+
+
+def test_delegation_permission_is_server_enforced(client: TestClient, model_stub: str) -> None:
+    setup = _setup_two_agents(client)
+    denied = client.patch(
+        f"/api/v1/agents/{setup['cto']['id']}",
+        headers=setup["headers"],
+        json={"allowed_agent_ids": []},
+    )
+    assert denied.status_code == 200, denied.text
+
+    session = client.post(
+        f"/api/v1/agents/{setup['cto']['id']}/sessions",
+        headers=setup["headers"],
+        json={"title": "越权委派"},
+    ).json()
+    run = _create_run(client, setup, session["id"], "尝试越权委派")
+    StubModelHandler.responses.extend(
+        [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_delegate_denied",
+                        "type": "function",
+                        "function": {
+                            "name": "delegate_task",
+                            "arguments": json.dumps(
+                                {
+                                    "agent_id": setup["researcher"]["id"],
+                                    "task": "越权任务",
+                                }
+                            ),
+                        },
+                    }
+                ],
+            },
+            {"role": "assistant", "content": "无法委派。", "tool_calls": []},
+        ]
+    )
+    asyncio.run(_execute(_runtime_settings(model_stub), setup["tenant_id"], run["id"]))
+
+    tools = client.get(f"/api/v1/runs/{run['id']}/tools", headers=setup["headers"]).json()
+    assert tools[0]["status"] == "failed"
+    assert "无权委派" in (tools[0]["error"] or "")
+    delegations = client.get(
+        f"/api/v1/sessions/{session['id']}/delegations", headers=setup["headers"]
+    ).json()
+    assert delegations == []
+
+
+def test_async_delegation_is_queued_and_finalized(client: TestClient, model_stub: str) -> None:
+    from orgweave_agent_sdk import AgentJob
+    from orgweave_agent_worker.runner import handle_agent_run
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    setup = _setup_two_agents(client)
+    session = client.post(
+        f"/api/v1/agents/{setup['cto']['id']}/sessions",
+        headers=setup["headers"],
+        json={"title": "异步委派"},
+    ).json()
+    run = _create_run(client, setup, session["id"], "异步委派调研")
+    StubModelHandler.responses.extend(
+        [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_delegate_async",
+                        "type": "function",
+                        "function": {
+                            "name": "delegate_task",
+                            "arguments": json.dumps(
+                                {
+                                    "agent_id": setup["researcher"]["id"],
+                                    "task": "异步调研任务",
+                                    "wait": False,
+                                }
+                            ),
+                        },
+                    }
+                ],
+            },
+            {"role": "assistant", "content": "已异步委派。", "tool_calls": []},
+        ]
+    )
+    asyncio.run(_execute(_runtime_settings(model_stub), setup["tenant_id"], run["id"]))
+    delegations = client.get(
+        f"/api/v1/sessions/{session['id']}/delegations", headers=setup["headers"]
+    ).json()
+    assert delegations[0]["status"] == "queued"
+    delegation = delegations[0]
+
+    StubModelHandler.responses.append(
+        {"role": "assistant", "content": "异步调研结果", "tool_calls": []}
+    )
+    settings = _runtime_settings(model_stub)
+
+    async def process_child() -> None:
+        engine = create_async_engine(settings.database_url)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        redis = Redis.from_url(settings.redis_url, decode_responses=True)
+        try:
+            job = AgentJob(
+                type="agent.run",
+                payload={
+                    "run_id": delegation["child_run_id"],
+                    "session_id": delegation["child_session_id"],
+                    "tenant_id": setup["tenant_id"],
+                },
+            )
+            await handle_agent_run(redis, settings, factory, job)
+        finally:
+            await redis.aclose()
+            await engine.dispose()
+
+    asyncio.run(process_child())
+    updated = client.get(f"/api/v1/delegations/{delegation['id']}", headers=setup["headers"]).json()
+    assert updated["status"] == "completed"
+    assert updated["summary"] == "异步调研结果"
