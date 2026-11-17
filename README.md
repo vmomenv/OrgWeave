@@ -86,14 +86,16 @@ pnpm --filter @orgweave/web build
 make temporal-test
 ```
 
-本机实测（2026-11-17）：
+本机实测（2026-11-17，完整 Docker Compose 栈）：
 
-- `docker compose config -q` 通过。
+- `docker compose config -q` 通过，全部 12 个服务启动；依赖容器均 `healthy`。
 - PostgreSQL 16.16 + pgvector 0.8.7、Redis、Temporal 1.29.7、LiteLLM、MinIO 均健康。
 - `alembic upgrade head` / `downgrade base` / `upgrade head` 通过。
 - `pytest`：**44 passed**（含真实基础设施集成测试）。
 - Web：ESLint 0 错误、TypeScript 通过、`next build` 通过、页面返回 200 且渲染真实 `ready` 状态。
-- Temporal `PingWorkflow` 端到端成功；Agent Worker `system.ping` 真实消费并返回结果；4 个 Worker 心跳均出现在 Redis。
+- 容器内 4 个 Worker 心跳均出现在 Redis；Agent Worker 真实消费 `system.ping` 并返回结果。
+- Temporal `PingWorkflow` 端到端成功。
+- `make verify`：**20 passed, 0 failed**。
 
 ## 目录结构
 
