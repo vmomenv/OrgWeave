@@ -75,6 +75,16 @@ RLS 实际配置：
 - `attachments`（MinIO object_key、上传者、大小、类型）。
 - 全部启用 FORCE RLS；复合外键保证群、成员、消息、附件同租户。
 
+## 5.2 Phase 3 表（已实现）
+
+- `agent_configs`（模型别名、System Prompt、工具白名单、硬限制）。
+- `agent_sessions`（独立 Session、parent_session_id、control_mode、用量）。
+- `agent_runs`（queued/running/completed/failed/cancelled、limits、steps、用量）。
+- `agent_session_messages`（user/assistant/tool 消息与 tool_calls）。
+- `agent_tool_calls`（参数、结果、状态、错误、时间）。
+- `agent_memories`（5 类记忆、重要度、来源 Session）。
+- 全部启用 FORCE RLS，复合外键保证同租户。
+
 ## 6. 后续数据模型（规划）
 
 完整模型包括 tenants、users、tenant_memberships、members、departments、roles、permissions、agents、agent_sessions、agent_runs、agent_memories、agent_*、groups、messages、goals、tasks、skills、automations、audit_logs、outbox_events 等，详见实现总指令第十二章。Phase 0 不提前建表，避免在租户模型未定时产生不可逆迁移。

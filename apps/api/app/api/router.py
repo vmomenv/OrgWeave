@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    agents,
     audit,
     auth,
     chat,
@@ -24,5 +25,6 @@ api_router.include_router(members.router)
 api_router.include_router(invitations.router)
 api_router.include_router(audit.router)
 api_router.include_router(chat.router)
+api_router.include_router(agents.router)
 
 __all__ = ["api_router"]

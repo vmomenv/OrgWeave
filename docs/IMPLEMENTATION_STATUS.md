@@ -5,7 +5,7 @@
 
 ## 当前阶段
 
-**Phase 3：Agent Runtime、Session、Memory、Tool Calling —— 下一步**
+**Phase 4：Agent Delegation、并行执行与任务依赖 —— 下一步**
 
 ## 已完成
 
@@ -43,15 +43,29 @@
 - [x] 前端群聊界面（会话列表、消息、提及、附件）
 - 验证：59 passed；Phase 2 验收脚本 9/9。
 
+### Phase 3（已完成，已验证；真实模型 E2E 待本地模型就绪）
+
+- [x] AgentConfig（System Prompt、模型别名、温度、工具白名单、所有硬限制）
+- [x] Agent Session / Run / Session 消息 / Tool Call / Memory 数据模型与 RLS
+- [x] LiteLLM OpenAI 兼容客户端（超时/错误脱敏）
+- [x] 工具调用循环：get_current_time、list_team_members、remember、search_memory
+- [x] 服务端硬限制：max_steps、max_tool_calls、max_duration、token budget、连续失败
+- [x] 取消（Redis 取消键 + queued 直接取消）与 Worker 执行适配
+- [x] 工具调用审计、会话消息持久化、完成后写入 Episodic Memory
+- [x] API：agents/sessions/runs/tools/memories
+- [x] 前端 AI 员工工作台（会话、执行、工具调用、记忆、配置）
+- [x] 测试：66 passed；含真实 Worker 适配器与工具循环、限制、取消、会话隔离
+- 说明：运行时使用确定性 OpenAI 兼容测试服务验证；真实模型调用（Ollama/付费 Key）
+  尚未完成最终验收，不能声称 MVP 模型能力已通过。
+
 ## 进行中
 
-- 准备 Phase 3：Agent 配置、Session/Run、模型调用、工具、记忆、执行限制。
+- 准备 Phase 4：Agent 委派、子 Session、并行执行与任务依赖。
 
 ## 下一步
 
-Phase 3 依赖顺序：Agent 配置与 Session/Run 模型 → LiteLLM 客户端 → 工具调用循环 →
-记忆 → Agent Worker 执行 → API/前端工作现场 → 模型联调与测试。
-注意：当前环境无模型 Key/Ollama，真实模型调用验收需人工提供凭据。
+Phase 4：委派数据模型/迁移 → 授权校验 → 委派工具 → 子 Session 执行 →
+API/前端任务树 → 测试。之后进入 MVP Checkpoint。
 
 ## 未解决问题
 

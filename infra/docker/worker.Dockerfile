@@ -16,12 +16,14 @@ WORKDIR /app
 COPY packages/shared-python /src/packages/shared-python
 COPY packages/agent-sdk /src/packages/agent-sdk
 COPY packages/skill-sdk /src/packages/skill-sdk
+COPY apps/api /src/apps/api
 COPY ${WORKER_PATH} /app/worker
 
 RUN pip install --no-cache-dir \
         /src/packages/shared-python \
         /src/packages/agent-sdk \
         /src/packages/skill-sdk \
+        /src/apps/api \
         /app/worker
 
 RUN useradd --create-home --uid 10001 orgweave

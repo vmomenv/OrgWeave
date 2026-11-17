@@ -80,7 +80,7 @@ def test_alembic_baseline_is_applied(settings: OrgWeaveSettings) -> None:
     import asyncio
 
     revision, table = asyncio.run(query())
-    assert revision == "0003_phase2_chat"
+    assert revision == "0004_phase3_agent"
     assert table == "system_settings"
 
 

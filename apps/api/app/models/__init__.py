@@ -1,5 +1,13 @@
 """Database models package."""
 
+from app.models.agent import (
+    AgentConfig,
+    AgentMemory,
+    AgentRun,
+    AgentSession,
+    AgentSessionMessage,
+    AgentToolCall,
+)
 from app.models.audit import AuditLog
 from app.models.base import Base
 from app.models.chat import Attachment, Group, GroupMember, Message, MessageMention
@@ -9,6 +17,12 @@ from app.models.system import SystemSetting
 from app.models.tenant import Department, Invitation, Member, Tenant, TenantMembership
 
 __all__ = [
+    "AgentConfig",
+    "AgentMemory",
+    "AgentRun",
+    "AgentSession",
+    "AgentSessionMessage",
+    "AgentToolCall",
     "Attachment",
     "AuditLog",
     "Base",

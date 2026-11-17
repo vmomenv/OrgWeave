@@ -2,9 +2,18 @@
 
 **AI Organization Operating System** — 以组织架构为基础、以 AI 员工为执行主体、以人类管理员为控制中心的多租户 AI 企业操作系统。
 
-> **当前状态：Phase 2（群聊、消息与实时 WebSocket）已完成并验收。** 已包含认证、多租户、组织架构、RBAC、邀请、审计、RLS、群聊/单聊、消息、@提及、附件与实时事件。Agent Runtime（Phase 3）尚未实现。
+> **当前状态：Phase 3（Agent Runtime）已完成并通过自动化测试；真实模型端到端验收等待本地模型或用户提供的模型凭据。** 已包含认证、多租户、组织、RBAC、RLS、群聊、附件、实时事件、Agent 配置、独立 Session/Run、模型网关、工具调用、记忆与执行限制。
 
 ## 已交付
+
+### Phase 3：Agent Runtime
+
+- AI 员工配置（模型别名、Prompt、工具白名单、步数/时长/Token/工具硬限制）。
+- 独立 Agent Session 与 Run；Agent Worker 消费队列执行。
+- LiteLLM 模型网关调用与工具调用循环（时间、成员列表、记忆读写）。
+- 工具调用审计、Session 消息、长期记忆、取消与失败记录。
+- Web AI 员工工作台（会话执行、工具、记忆、配置）。
+- 注意：默认模型别名指向本地 Ollama；无可用模型时 Run 会明确失败，不会伪造结果。
 
 ### Phase 2：群聊与消息
 
@@ -153,7 +162,8 @@ scripts/                bootstrap / health / verify / worker / temporal smoke
 
 ## 已知限制（Phase 0 范围内）
 
-- Agent Runtime、委派、任务、Skills、自动化等 Phase 3+ 功能尚未实现。
+- Agent 委派、任务、Skills、自动化等 Phase 4+ 功能尚未实现。
+- 真实模型调用尚未完成本机验收（缺少本地模型/付费 Key）。
 - `/ws/v1` 仅提供无业务数据的握手与 ping/pong；认证与业务事件在 Phase 1/2 加入。
 - Agent Worker 只处理 `system.ping`，其余任务进入死信队列；真实 Agent Runtime 在 Phase 3。
 - Skill Runner **不执行任何代码**，避免在隔离机制完成前暴露执行面；执行能力在 Phase 5。

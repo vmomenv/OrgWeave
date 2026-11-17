@@ -2,7 +2,30 @@
 
 > 只记录实际执行过的命令和结果。环境：本机 Docker Compose，2026-11-17。
 
-## Phase 2（当前）
+## Phase 3（当前）
+
+```bash
+ORGWEAVE_INTEGRATION=1 .venv/bin/python -m pytest -q
+# 66 passed
+pnpm --filter @orgweave/web typecheck && pnpm --filter @orgweave/web build
+# 通过
+```
+
+覆盖：
+
+- AI 成员创建时自动生成 AgentConfig（模型别名、工具、硬限制）。
+- Session 创建、Run 入队、取消。
+- 工具调用循环：模型返回 tool_call → 服务端执行 → tool 消息 → 最终回答。
+- 工具记录（参数、结果、状态）与会话消息持久化。
+- max_steps 强制失败、token 统计、完成写入 Episodic Memory。
+- 模型网关失败时 Run failed 并记录脱敏错误。
+- 两个 Session 消息严格隔离。
+- Agent Worker 的 `handle_agent_run` 真实处理排队 Job。
+
+模型测试使用本地确定性 OpenAI 兼容 stub（仅测试替身，不冒充真实模型）；
+真实模型调用尚未验收。
+
+## Phase 2（历史）
 
 ```bash
 ORGWEAVE_INTEGRATION=1 .venv/bin/python -m pytest -q

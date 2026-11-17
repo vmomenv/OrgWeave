@@ -214,3 +214,93 @@ export async function uploadAttachment(
   }
   return payload as Attachment;
 }
+
+export type Agent = {
+  id: string;
+  member_id: string;
+  member_name: string;
+  member_title: string | null;
+  member_ai_enabled: boolean;
+  system_prompt: string;
+  model_alias: string;
+  temperature: number;
+  max_output_tokens: number;
+  max_steps: number;
+  max_duration_seconds: number;
+  token_budget: number;
+  cost_budget_usd: number;
+  max_tool_calls: number;
+  max_consecutive_failures: number;
+  allowed_tools: string[];
+  memory_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AgentSession = {
+  id: string;
+  agent_id: string;
+  member_id: string;
+  parent_session_id: string | null;
+  status: string;
+  control_mode: string;
+  title: string;
+  context_summary: string;
+  model: string;
+  token_usage: number;
+  cost_usage: number;
+  created_at: string;
+  updated_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  last_run_status: string | null;
+};
+
+export type AgentRun = {
+  id: string;
+  session_id: string;
+  status: string;
+  input: string;
+  output: string | null;
+  error: string | null;
+  steps: number;
+  tool_calls_count: number;
+  token_usage: number;
+  cost_usage: number;
+  limits: Record<string, number>;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+};
+
+export type SessionMessage = {
+  id: string;
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  tool_calls: Record<string, unknown>[] | null;
+  tool_call_id: string | null;
+  created_at: string;
+};
+
+export type AgentToolCall = {
+  id: string;
+  run_id: string;
+  tool_name: string;
+  arguments: Record<string, unknown>;
+  result: Record<string, unknown> | null;
+  status: string;
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+export type AgentMemory = {
+  id: string;
+  agent_id: string;
+  memory_type: string;
+  content: string;
+  importance: number;
+  source_session_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};

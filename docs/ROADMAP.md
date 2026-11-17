@@ -59,13 +59,22 @@
 
 已知限制：移除群成员对已建立 WebSocket 连接在重连后才生效；附件仅单文件上传。
 
-## Phase 3：Agent Runtime（下一步）
+## Phase 3：Agent Runtime — ✅ 已完成（真实模型 E2E 待就绪）
 
 Agent 配置、Session/Run、模型调用、工具、上下文、记忆、执行限制、状态管理。
 
 验收：AI 员工接收任务并调用真实工具，产生审计与交付物。
 
-## Phase 4：Agent Delegation
+实施结果（2026-11-17）：
+
+- Agent 配置、独立 Session、Run、会话消息、工具调用、记忆（RLS）。
+- LiteLLM 客户端 + 4 个内置工具 + 服务端硬限制与取消。
+- Agent Worker 消费 `agent.run` 队列，真实执行工具循环。
+- API + AI 员工工作台前端。
+- 测试：66 passed（确定性 OpenAI 兼容服务验证循环/限制/取消/Worker）。
+- 未完成：真实模型端到端（无 Key；等待本地 Ollama）。
+
+## Phase 4：Agent Delegation（下一步）
 
 员工调用员工、独立 Child Session、异步/并行/依赖/取消/结果回传、委派权限。
 

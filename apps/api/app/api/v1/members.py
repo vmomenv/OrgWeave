@@ -16,6 +16,7 @@ from app.api.deps import (
     require_permission,
     set_tenant_context,
 )
+from app.application.agent_service import ensure_agent_for_member
 from app.application.audit import record_audit
 from app.application.organization import get_member_or_none, members_to_out, role_keys_for_member
 from app.core.errors import ApiError
@@ -208,6 +209,9 @@ async def create_member(
 
     for role in roles:
         session.add(MemberRole(tenant_id=context.tenant_id, member_id=member.id, role_id=role.id))
+
+    if member.member_type == "ai":
+        await ensure_agent_for_member(session, context.tenant_id, member)
 
     record_audit(
         session,

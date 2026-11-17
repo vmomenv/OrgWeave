@@ -127,6 +127,19 @@ WebSocket：`ws://localhost:8000/ws/v1?token=<access>&tenant_id=<tenant>`。
 `{"type":"message.created","group_id","message","mentioned_ai_ids"}` 仅转发给群成员。
 客户端可发送 `{"type":"resubscribe"}` 刷新群订阅。
 
-## 7. 后续模块
+## 7. Phase 3 已实现端点
+
+- `GET/POST /agents`、`GET/PATCH /agents/{id}`
+- `GET/POST /agents/{id}/sessions`
+- `GET /sessions/{id}`、`GET /sessions/{id}/messages`
+- `POST /sessions/{id}/runs`（入队 Agent Worker；返回 Run）
+- `GET /runs/{id}`、`GET /runs/{id}/tools`、`POST /runs/{id}/cancel`
+- `GET/POST /agents/{id}/memories`
+
+Run 的限制（max_steps、max_duration、token_budget、max_tool_calls、
+max_consecutive_failures）由服务端存储并由 Worker 执行，模型无法扩大。
+错误统一返回 `{"error":{"code","message"}}`。
+
+## 8. 后续模块
 
 Phase 1–8 将依次增加 `auth`、`tenants`、`memberships`、`departments`、`members`、`agents`、`agent-sessions`、`agent-runs`、`agent-delegations`、`agent-memories`、`agent-tools`、`agent-skills`、`groups`、`messages`、`goals`、`tasks`、`automations`、`artifacts`、`takeovers`、`interventions`、`alerts`、`audit`、`models`、`files`。每增加一个模块，必须同时提供 OpenAPI、权限检查与审计。
