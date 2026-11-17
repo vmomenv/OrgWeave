@@ -6,16 +6,16 @@ import asyncio
 import io
 import logging
 import uuid
-from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import iterate_in_threadpool
 
 from app.api.deps import (
     TenantContext,
@@ -367,14 +367,14 @@ async def upload_attachment(
 
 @router.get(
     "/attachments/{attachment_id}",
-    summary="Download an attachment via a short-lived URL",
+    summary="Download an attachment (streamed, permission-checked)",
 )
 async def download_attachment(
     attachment_id: uuid.UUID,
     request: Request,
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     session: Annotated[AsyncSession, Depends(get_session)],
-) -> RedirectResponse:
+) -> StreamingResponse:
     attachment = await session.scalar(
         select(Attachment).where(
             Attachment.tenant_id == context.tenant_id, Attachment.id == attachment_id
@@ -384,17 +384,32 @@ async def download_attachment(
         raise ApiError(404, "attachment_not_found", "附件不存在")
     await require_membership(session, context.tenant_id, attachment.group_id, context.member.id)
     settings = request.app.state.settings
+    try:
+        upstream = await asyncio.to_thread(
+            request.app.state.minio.get_object,
+            settings.minio_bucket,
+            attachment.object_key,
+        )
+    except Exception as exc:
+        raise ApiError(502, "storage_unavailable", "附件读取失败") from exc
+
+    async def stream_body():
+        try:
+            async for chunk in iterate_in_threadpool(upstream.stream(64 * 1024)):
+                yield chunk
+        finally:
+            await asyncio.to_thread(upstream.close)
+
     safe_filename = attachment.filename.replace('"', "_")
-    url = await asyncio.to_thread(
-        request.app.state.minio.presigned_get_object,
-        settings.minio_bucket,
-        attachment.object_key,
-        expires=timedelta(minutes=5),
-        response_headers={
-            "response-content-disposition": (
+    await session.commit()
+    return StreamingResponse(
+        stream_body(),
+        media_type=attachment.content_type,
+        headers={
+            "Content-Length": str(attachment.size_bytes),
+            "Content-Disposition": (
                 f'attachment; filename="download"; ' f"filename*=UTF-8''{quote(safe_filename)}"
-            )
+            ),
+            "X-Content-Type-Options": "nosniff",
         },
     )
-    await session.commit()
-    return RedirectResponse(url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)

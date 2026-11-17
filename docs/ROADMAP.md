@@ -41,13 +41,25 @@
 
 ---
 
-## Phase 2：群聊与消息（下一步）
+## Phase 2：群聊与消息 — ✅ 已完成
 
 单聊/群聊、成员管理、@成员/@AI、线程、附件、已读、搜索、WebSocket 实时。
 
 验收：普通群聊不自动触发所有 AI；只有明确 @ / 正式任务 / 自动化事件才启动 Agent。
 
-## Phase 3：Agent Runtime
+实施结果（2026-11-17）：
+
+- groups/group_members/messages/message_mentions/attachments + RLS。
+- 单聊自动去重、群成员权限、线程回复、搜索、未读/已读。
+- 服务端解析 @显示名 记录 AI 提及；不自动执行 AI（Agent Runtime 在 Phase 3）。
+- MinIO 附件上传/下载（权限校验 + 大小/类型限制）。
+- WebSocket 租户鉴权、群事件 Redis 广播、resubscribe。
+- 前端群聊面板与实时状态。
+- 测试：59 passed；Phase 2 验收 9/9。
+
+已知限制：移除群成员对已建立 WebSocket 连接在重连后才生效；附件仅单文件上传。
+
+## Phase 3：Agent Runtime（下一步）
 
 Agent 配置、Session/Run、模型调用、工具、上下文、记忆、执行限制、状态管理。
 

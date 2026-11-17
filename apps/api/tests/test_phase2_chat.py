@@ -7,7 +7,6 @@ import json
 import uuid
 from collections.abc import Iterator
 
-import httpx
 import pytest
 from app.application.chat import event_channel
 from app.main import app
@@ -252,13 +251,10 @@ def test_attachment_upload_and_download(client: TestClient) -> None:
     download = client.get(
         f"/api/v1/attachments/{attachment['id']}",
         headers=_headers(owner, tenant_id),
-        follow_redirects=False,
     )
-    assert download.status_code == 307
-    location = download.headers["location"]
-    fetched = httpx.get(location, timeout=10)
-    assert fetched.status_code == 200
-    assert fetched.content == b"hello orgweave attachment"
+    assert download.status_code == 200
+    assert download.content == b"hello orgweave attachment"
+    assert "attachment" in download.headers["content-disposition"]
 
     unsupported = client.post(
         f"/api/v1/groups/{group_id}/attachments",

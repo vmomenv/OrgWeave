@@ -113,6 +113,20 @@
 `ws://localhost:8000/ws/v1?token=<access_token>`。缺少或无效 Token 会收到
 `{"type":"error","reason":"unauthorized"}` 并以 4401 关闭。
 
-## 6. 后续模块
+## 6. Phase 2 已实现端点
+
+- `GET/POST /groups`、`GET/PATCH /groups/{id}`
+- `POST /groups/{id}/members`、`DELETE /groups/{id}/members/{member_id}`
+- `GET/POST /groups/{id}/messages`（支持 `limit`、`search`）
+- `POST /groups/{id}/read`
+- `POST /groups/{id}/attachments`（multipart，10 MiB 限制）
+- `GET /attachments/{id}`（流式下载，需群成员权限）
+
+WebSocket：`ws://localhost:8000/ws/v1?token=<access>&tenant_id=<tenant>`。
+连接时验证租户成员身份并返回该成员所在群；消息事件
+`{"type":"message.created","group_id","message","mentioned_ai_ids"}` 仅转发给群成员。
+客户端可发送 `{"type":"resubscribe"}` 刷新群订阅。
+
+## 7. 后续模块
 
 Phase 1–8 将依次增加 `auth`、`tenants`、`memberships`、`departments`、`members`、`agents`、`agent-sessions`、`agent-runs`、`agent-delegations`、`agent-memories`、`agent-tools`、`agent-skills`、`groups`、`messages`、`goals`、`tasks`、`automations`、`artifacts`、`takeovers`、`interventions`、`alerts`、`audit`、`models`、`files`。每增加一个模块，必须同时提供 OpenAPI、权限检查与审计。

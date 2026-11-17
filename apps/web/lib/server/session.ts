@@ -120,12 +120,14 @@ export function withRefreshedCookies(
 }
 
 export function upstreamToNext(response: Response): NextResponse {
-  return new NextResponse(response.body, {
-    status: response.status,
-    headers: {
-      "content-type": response.headers.get("content-type") ?? "application/json",
-    },
-  });
+  const headers: Record<string, string> = {
+    "content-type": response.headers.get("content-type") ?? "application/json",
+  };
+  for (const name of ["content-disposition", "content-length", "cache-control"]) {
+    const value = response.headers.get(name);
+    if (value) headers[name] = value;
+  }
+  return new NextResponse(response.body, { status: response.status, headers });
 }
 
 export function isSameOrigin(request: NextRequest): boolean {

@@ -9,7 +9,7 @@ DC ?= docker compose
 COMPOSE_FILE := docker-compose.yml
 
 .PHONY: help bootstrap install env infra up down restart logs ps health migrate migrate-down \
-        db-bootstrap test test-unit test-integration lint format api web workers workers-stop temporal-test verify verify-phase1 clean
+        db-bootstrap test test-unit test-integration lint format api web workers workers-stop temporal-test verify verify-phase1 verify-phase2 clean
 
 help: ## Show available commands
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -97,6 +97,9 @@ verify: ## Full Phase 0 acceptance verification
 
 verify-phase1: ## Phase 1 acceptance (auth, org, RLS boundary, web)
 	@bash scripts/verify-phase1.sh
+
+verify-phase2: ## Phase 2 acceptance (groups, messages, files, isolation)
+	@bash scripts/verify-phase2.sh
 
 clean: ## Remove build artifacts and caches (keeps .env and volumes)
 	rm -rf .pytest_cache .ruff_cache .data/logs

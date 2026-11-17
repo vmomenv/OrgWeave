@@ -2,7 +2,25 @@
 
 > 只记录实际执行过的命令和结果。环境：本机 Docker Compose，2026-11-17。
 
-## Phase 1（当前）
+## Phase 2（当前）
+
+```bash
+ORGWEAVE_INTEGRATION=1 .venv/bin/python -m pytest -q
+# 59 passed
+bash scripts/verify-phase2.sh
+# Phase 2 verification: 9 passed, 0 failed
+pnpm --filter @orgweave/web typecheck && pnpm --filter @orgweave/web build
+# 通过
+```
+
+覆盖：群组/单聊去重、群成员权限、非群成员 404、消息与线程、@AI 解析、
+搜索、未读数与已读、附件上传/下载/类型拒绝、WebSocket 租户鉴权与实时事件、
+跨租户 403、前端构建。
+
+手工容器链路：Next.js BFF 建租户 → 建 AI 员工 → 建群 → @AI 消息（mention 记录为 ai）
+→ 上传附件 → 下载内容一致。
+
+## Phase 1（历史）
 
 ### 后端测试
 

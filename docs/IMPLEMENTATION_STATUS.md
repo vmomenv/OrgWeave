@@ -5,7 +5,7 @@
 
 ## 当前阶段
 
-**Phase 2：群聊、消息与 WebSocket —— 下一步**
+**Phase 3：Agent Runtime、Session、Memory、Tool Calling —— 下一步**
 
 ## 已完成
 
@@ -32,14 +32,26 @@
 - [x] 前端构建与文档更新
 - 验证：54 passed；Phase 1 验收脚本 13/13。
 
+### Phase 2（已完成，已验证）
+
+- [x] 群组（channel）与单聊（direct，自动去重）
+- [x] 群成员增删、群主保护
+- [x] 文本消息、线程回复、搜索、未读数、已读
+- [x] @成员与 @AI 提及（服务端解析并记录）
+- [x] 文件附件上传（10 MiB、类型白名单、对象存储）与权限校验下载
+- [x] WebSocket 租户鉴权、群事件实时广播、resubscribe
+- [x] 前端群聊界面（会话列表、消息、提及、附件）
+- 验证：59 passed；Phase 2 验收脚本 9/9。
+
 ## 进行中
 
-- 准备 Phase 2：群聊、消息、成员管理、WebSocket 实时事件。
+- 准备 Phase 3：Agent 配置、Session/Run、模型调用、工具、记忆、执行限制。
 
 ## 下一步
 
-Phase 2 依赖顺序：数据库模型/迁移 → 群组与消息 API → WebSocket 房间鉴权/广播 →
-前端群聊界面 → 测试与文档。之后进入 Phase 3 Agent Runtime。
+Phase 3 依赖顺序：Agent 配置与 Session/Run 模型 → LiteLLM 客户端 → 工具调用循环 →
+记忆 → Agent Worker 执行 → API/前端工作现场 → 模型联调与测试。
+注意：当前环境无模型 Key/Ollama，真实模型调用验收需人工提供凭据。
 
 ## 未解决问题
 

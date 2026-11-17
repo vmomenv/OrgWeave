@@ -68,6 +68,13 @@ RLS 实际配置：
 - 后续所有关键写操作必须在同一事务内写入审计/Outbox，避免“业务成功、事件丢失”。
 - 对象存储中的文件不属于数据库事务，采用“先写元数据草稿 → 上传 → 标记完成”的状态机。
 
+## 5.1 Phase 2 表（已实现）
+
+- `groups`（channel/direct）、`group_members`（role、last_read_at）。
+- `messages`（线程 parent、软删除、metadata）、`message_mentions`。
+- `attachments`（MinIO object_key、上传者、大小、类型）。
+- 全部启用 FORCE RLS；复合外键保证群、成员、消息、附件同租户。
+
 ## 6. 后续数据模型（规划）
 
 完整模型包括 tenants、users、tenant_memberships、members、departments、roles、permissions、agents、agent_sessions、agent_runs、agent_memories、agent_*、groups、messages、goals、tasks、skills、automations、audit_logs、outbox_events 等，详见实现总指令第十二章。Phase 0 不提前建表，避免在租户模型未定时产生不可逆迁移。

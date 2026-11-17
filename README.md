@@ -2,9 +2,18 @@
 
 **AI Organization Operating System** — 以组织架构为基础、以 AI 员工为执行主体、以人类管理员为控制中心的多租户 AI 企业操作系统。
 
-> **当前状态：Phase 1（用户、租户、组织架构与权限）已完成并验收。** 已包含认证、多租户、组织成员、部门、RBAC、邀请、审计与 PostgreSQL RLS。群聊（Phase 2）、Agent Runtime（Phase 3）尚未实现。
+> **当前状态：Phase 2（群聊、消息与实时 WebSocket）已完成并验收。** 已包含认证、多租户、组织架构、RBAC、邀请、审计、RLS、群聊/单聊、消息、@提及、附件与实时事件。Agent Runtime（Phase 3）尚未实现。
 
 ## 已交付
+
+### Phase 2：群聊与消息
+
+- 群聊与单聊（自动去重）、群成员管理、群主保护。
+- 消息历史、线程回复、搜索、未读数/已读。
+- @人类成员 / @AI 员工（服务端解析，不自动执行 AI）。
+- 附件上传/下载（MinIO、10 MiB、类型白名单、成员权限）。
+- WebSocket 租户鉴权 + Redis 事件实时广播 + resubscribe。
+- Web 群聊界面与实时连接状态。
 
 ### Phase 1：用户、租户、组织与权限
 
@@ -144,7 +153,7 @@ scripts/                bootstrap / health / verify / worker / temporal smoke
 
 ## 已知限制（Phase 0 范围内）
 
-- 群聊、消息、Agent Runtime 等 Phase 2+ 功能尚未实现。
+- Agent Runtime、委派、任务、Skills、自动化等 Phase 3+ 功能尚未实现。
 - `/ws/v1` 仅提供无业务数据的握手与 ping/pong；认证与业务事件在 Phase 1/2 加入。
 - Agent Worker 只处理 `system.ping`，其余任务进入死信队列；真实 Agent Runtime 在 Phase 3。
 - Skill Runner **不执行任何代码**，避免在隔离机制完成前暴露执行面；执行能力在 Phase 5。
